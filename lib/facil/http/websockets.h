@@ -52,7 +52,7 @@ Websocket Connection Management (write / close)
 ***************************************************************************** */
 
 /** Writes data to the websocket. Returns -1 on failure (0 on success). */
-int websocket_write(ws_s *ws, fio_str_info_s msg, uint8_t is_text);
+int websocket_write(ws_s *ws, fio_string_info_s msg, uint8_t is_text);
 /** Closes a websocket connection. */
 void websocket_close(ws_s *ws);
 
@@ -77,13 +77,13 @@ struct websocket_subscribe_s {
   /** the websocket receiving the message. REQUIRED. */
   ws_s *ws;
   /** the channel where the message was published. */
-  fio_str_info_s channel;
+  fio_string_info_s channel;
   /**
    * The callback that handles pub/sub notifications.
    *
    * Default: send directly to websocket client.
    */
-  void (*on_message)(ws_s *ws, fio_str_info_s channel, fio_str_info_s msg,
+  void (*on_message)(ws_s *ws, fio_string_info_s channel, fio_string_info_s msg,
                      void *udata);
   /**
    * An optional cleanup callback for the `udata`.
@@ -174,7 +174,7 @@ void websocket_unsubscribe(ws_s *ws, uintptr_t subscription_id);
  *
  *     FIOBJ pre_wrapped = (FIOBJ)fio_message_metadata(msg,
  *                               WEBSOCKET_OPTIMIZE_PUBSUB);
- *     fiobj_send_free((intptr_t)msg->udata1, fiobj_dup(pre_wrapped));
+ *     fiobj_send_free((intptr_t)msg->udata1, fiobj_duplicate(pre_wrapped));
  */
 void websocket_optimize4broadcasts(intptr_t type, int enable);
 

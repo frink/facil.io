@@ -110,18 +110,18 @@ Returns the number of bytes actually written (excluding the NUL terminator).
 #### `fio_ltocstr`
 
 ```c
-fio_str_info_s fio_ltocstr(long);
+fio_string_info_s fio_ltocstr(long);
 ```
 
 Converts a number to a temporary, thread local, C string object
 
-The `fio_str_s` object is only valid until the function is called again within the same thread or the thread terminates.
+The `fio_string_s` object is only valid until the function is called again within the same thread or the thread terminates.
 
 #### `fio_ftocstr`
 
 ```c
-fio_str_info_s fio_ftocstr(double);
+fio_string_info_s fio_ftocstr(double);
 ```
 Converts a float to a temporary, thread local, C string object
 
-The `fio_str_s` object is only valid until the function is called again within the same thread or the thread terminates.
+The `fio_string_s` object is only valid until the function is called again within the same thread or the thread terminates.

@@ -68,14 +68,14 @@ typedef uintptr_t FIOBJ;
 #define FIOBJ_IS_NULL(obj) (!obj || obj == (FIOBJ)FIOBJ_T_NULL)
 #define FIOBJ_INVALID 0
 
-#ifndef H___FIO_STR_INFO_H
+#ifndef H___FIO_STRING_INFO_H
 /** A String information type, reports information about a C string. */
-typedef struct fio_str_info_s {
+typedef struct fio_string_info_s {
   size_t capa; /* Buffer capacity, if the string is writable. */
   size_t len;  /* String length. */
   char *data;  /* String's first byte. */
-} fio_str_info_s;
-#define H___FIO_STR_INFO_H
+} fio_string_info_s;
+#define H___FIO_STRING_INFO_H
 #endif
 
 /* *****************************************************************************
@@ -145,7 +145,7 @@ FIO_INLINE intptr_t fiobj_obj2num(const FIOBJ obj);
 FIO_INLINE double fiobj_obj2float(const FIOBJ obj);
 
 /**
- * Returns a C String (NUL terminated) using the `fio_str_info_s` data type.
+ * Returns a C String (NUL terminated) using the `fio_string_info_s` data type.
  *
  * The Sting in binary safe and might contain NUL bytes in the middle as well as
  * a terminating NUL.
@@ -157,7 +157,7 @@ FIO_INLINE double fiobj_obj2float(const FIOBJ obj);
  *
  * A type error results in NULL (i.e. object isn't a String).
  */
-FIO_INLINE fio_str_info_s fiobj_obj2cstr(const FIOBJ obj);
+FIO_INLINE fio_string_info_s fiobj_obj2cstr(const FIOBJ obj);
 
 /**
  * Calculates an Objects's SipHash value for possible use as a HashMap key.
@@ -317,7 +317,7 @@ typedef struct {
   size_t (*const each)(FIOBJ, size_t start_at, int (*task)(FIOBJ, void *),
                        void *);
   /* object value as String */
-  fio_str_info_s (*const to_str)(const FIOBJ);
+  fio_string_info_s (*const to_str)(const FIOBJ);
   /* object value as Integer */
   intptr_t (*const to_i)(const FIOBJ);
   /* object value as Float */
@@ -494,13 +494,13 @@ FIO_INLINE intptr_t fiobj_obj2num(const FIOBJ o) {
 }
 
 /** Converts a number to a temporary, thread safe, C string object */
-fio_str_info_s fio_ltocstr(long);
+fio_string_info_s fio_ltocstr(long);
 
 /** Converts a float to a temporary, thread safe, C string object */
-fio_str_info_s fio_ftocstr(double);
+fio_string_info_s fio_ftocstr(double);
 
 /**
- * Returns a C String (NUL terminated) using the `fio_str_info_s` data type.
+ * Returns a C String (NUL terminated) using the `fio_string_info_s` data type.
  *
  * The Sting in binary safe and might contain NUL bytes in the middle as well as
  * a terminating NUL.
@@ -512,9 +512,9 @@ fio_str_info_s fio_ftocstr(double);
  *
  * A type error results in NULL (i.e. object isn't a String).
  */
-FIO_INLINE fio_str_info_s fiobj_obj2cstr(const FIOBJ o) {
+FIO_INLINE fio_string_info_s fiobj_obj2cstr(const FIOBJ o) {
   if (!o) {
-    fio_str_info_s ret = {0, 4, (char *)"null"};
+    fio_string_info_s ret = {0, 4, (char *)"null"};
     return ret;
   }
   if (o & FIOBJECT_NUMBER_FLAG)
@@ -522,26 +522,26 @@ FIO_INLINE fio_str_info_s fiobj_obj2cstr(const FIOBJ o) {
   if ((o & FIOBJECT_PRIMITIVE_FLAG) == FIOBJECT_PRIMITIVE_FLAG) {
     switch ((fiobj_type_enum)o) {
     case FIOBJ_T_NULL: {
-      fio_str_info_s ret = {0, 4, (char *)"null"};
+      fio_string_info_s ret = {0, 4, (char *)"null"};
       return ret;
     }
     case FIOBJ_T_FALSE: {
-      fio_str_info_s ret = {0, 5, (char *)"false"};
+      fio_string_info_s ret = {0, 5, (char *)"false"};
       return ret;
     }
     case FIOBJ_T_TRUE: {
-      fio_str_info_s ret = {0, 4, (char *)"true"};
+      fio_string_info_s ret = {0, 4, (char *)"true"};
       return ret;
     }
     default:
       break;
     }
   }
-  return FIOBJECT2VTBL(o)->to_str(o);
+  return FIOBJECT2VTBL(o)->to_string(o);
 }
 
 /* referenced here */
-uint64_t fiobj_str_hash(FIOBJ o);
+uint64_t fiobj_string_hash(FIOBJ o);
 /**
  * Calculates an Objects's SipHash value for possible use as a HashMap key.
  *
@@ -550,10 +550,10 @@ uint64_t fiobj_str_hash(FIOBJ o);
  */
 FIO_INLINE uint64_t fiobj_obj2hash(const FIOBJ o) {
   if (FIOBJ_TYPE_IS(o, FIOBJ_T_STRING))
-    return fiobj_str_hash(o);
+    return fiobj_string_hash(o);
   if (!FIOBJ_IS_ALLOCATED(o))
     return (uint64_t)o;
-  fio_str_info_s s = fiobj_obj2cstr(o);
+  fio_string_info_s s = fiobj_obj2cstr(o);
   return FIO_HASH_FN(s.data, s.len, &fiobj_each2, &fiobj_free_complex_object);
 }
 

@@ -5,10 +5,10 @@ License: MIT
 #define INCLUDE_MUSTACHE_IMPLEMENTATION 1
 #include <mustache_parser.h>
 
-#include <fiobj_ary.h>
+#include <fiobj_array.h>
 #include <fiobj_hash.h>
 #include <fiobj_mustache.h>
-#include <fiobj_str.h>
+#include <fiobj_string.h>
 
 #ifndef FIO_IGNORE_MACRO
 /**
@@ -28,7 +28,7 @@ License: MIT
  *
  * The `filename` argument should contain the template's file name.
  */
-mustache_s *fiobj_mustache_load(fio_str_info_s filename) {
+mustache_s *fiobj_mustache_load(fio_string_info_s filename) {
   return mustache_load(.filename = filename.data, .filename_len = filename.len);
 }
 
@@ -69,7 +69,7 @@ FIOBJ fiobj_mustache_build2(FIOBJ dest, mustache_s *mustache, FIOBJ data) {
 FIOBJ fiobj_mustache_build(mustache_s *mustache, FIOBJ data) {
   if (!mustache)
     return FIOBJ_INVALID;
-  return fiobj_mustache_build2(fiobj_str_buf(mustache->u.read_only.data_length),
+  return fiobj_mustache_build2(fiobj_string_buffer(mustache->u.read_only.data_length),
                                mustache, data);
 }
 
@@ -88,8 +88,8 @@ static inline FIOBJ fiobj_mustache_find_obj_absolute(FIOBJ parent, FIOBJ key) {
 static inline FIOBJ fiobj_mustache_find_obj_tree(mustache_section_s *section,
                                                  const char *name,
                                                  uint32_t name_len) {
-  FIOBJ key = fiobj_str_tmp();
-  fiobj_str_write(key, name, name_len);
+  FIOBJ key = fiobj_string_tmp();
+  fiobj_string_write(key, name, name_len);
   do {
     FIOBJ tmp = fiobj_mustache_find_obj_absolute((FIOBJ)section->udata2, key);
     if (tmp != FIOBJ_INVALID) {
@@ -117,8 +117,8 @@ static inline FIOBJ fiobj_mustache_find_obj(mustache_section_s *section,
   }
   ++dot;
   for (;;) {
-    FIOBJ key = fiobj_str_tmp();
-    fiobj_str_write(key, name + dot, name_len - dot);
+    FIOBJ key = fiobj_string_tmp();
+    fiobj_string_write(key, name + dot, name_len - dot);
     FIOBJ obj = fiobj_mustache_find_obj_absolute(tmp, key);
     if (obj != FIOBJ_INVALID)
       return obj;
@@ -130,8 +130,8 @@ static inline FIOBJ fiobj_mustache_find_obj(mustache_section_s *section,
     if (dot == name_len) {
       return FIOBJ_INVALID;
     }
-    key = fiobj_str_tmp();
-    fiobj_str_write(key, name, dot);
+    key = fiobj_string_tmp();
+    fiobj_string_write(key, name, dot);
     tmp = fiobj_mustache_find_obj_absolute(tmp, key);
     if (tmp == FIOBJ_INVALID)
       return FIOBJ_INVALID;
@@ -156,7 +156,7 @@ static int mustache_on_arg(mustache_section_s *section, const char *name,
   FIOBJ o = fiobj_mustache_find_obj(section, name, name_len);
   if (!o)
     return 0;
-  fio_str_info_s i = fiobj_obj2cstr(o);
+  fio_string_info_s i = fiobj_obj2cstr(o);
   if (!i.len)
     return 0;
   return mustache_write_text(section, i.data, i.len, escape);
@@ -170,7 +170,7 @@ static int mustache_on_arg(mustache_section_s *section, const char *name,
 static int mustache_on_text(mustache_section_s *section, const char *data,
                             uint32_t data_len) {
   FIOBJ dest = (FIOBJ)section->udata1;
-  fiobj_str_write(dest, data, data_len);
+  fiobj_string_write(dest, data, data_len);
   return 0;
 }
 
@@ -195,7 +195,7 @@ static int32_t mustache_on_section_test(mustache_section_s *section,
   if (!o || FIOBJ_TYPE_IS(o, FIOBJ_T_FALSE))
     return 0;
   if (FIOBJ_TYPE_IS(o, FIOBJ_T_ARRAY))
-    return fiobj_ary_count(o);
+    return fiobj_array_count(o);
   return 1;
   (void)callable; /* FIOBJ doesn't support lambdas */
 }
@@ -219,7 +219,7 @@ static int mustache_on_section_start(mustache_section_s *section,
   if (!o)
     return -1;
   if (FIOBJ_TYPE_IS(o, FIOBJ_T_ARRAY))
-    section->udata2 = (void *)fiobj_ary_index(o, index);
+    section->udata2 = (void *)fiobj_array_index(o, index);
   else
     section->udata2 = (void *)o;
   return 0;
@@ -267,35 +267,35 @@ void fiobj_mustache_test(void) {
   char const *template_name = "mustache_test_template.mustache";
   mustache_save2file(template_name, template, strlen(template));
   mustache_s *m =
-      fiobj_mustache_load((fio_str_info_s){.data = (char *)template_name});
+      fiobj_mustache_load((fio_string_info_s){.data = (char *)template_name});
   unlink(template_name);
   TEST_ASSERT(m, "fiobj_mustache_load failed.\n");
   FIOBJ data = fiobj_hash_new();
-  FIOBJ key = fiobj_str_new("users", 5);
-  FIOBJ ary = fiobj_ary_new2(4);
+  FIOBJ key = fiobj_string_new("users", 5);
+  FIOBJ ary = fiobj_array_new2(4);
   fiobj_hash_set(data, key, ary);
   fiobj_free(key);
   for (int i = 0; i < 4; ++i) {
-    FIOBJ id = fiobj_str_buf(4);
-    fiobj_str_write_i(id, i);
-    FIOBJ name = fiobj_str_buf(4);
-    fiobj_str_write(name, "User ", 5);
-    fiobj_str_write_i(name, i);
+    FIOBJ id = fiobj_string_buffer(4);
+    fiobj_string_write_i(id, i);
+    FIOBJ name = fiobj_string_buffer(4);
+    fiobj_string_write(name, "User ", 5);
+    fiobj_string_write_i(name, i);
     FIOBJ usr = fiobj_hash_new2(2);
-    key = fiobj_str_new("id", 2);
+    key = fiobj_string_new("id", 2);
     fiobj_hash_set(usr, key, id);
     fiobj_free(key);
-    key = fiobj_str_new("name", 4);
+    key = fiobj_string_new("name", 4);
     fiobj_hash_set(usr, key, name);
     fiobj_free(key);
-    fiobj_ary_push(ary, usr);
+    fiobj_array_push(ary, usr);
   }
-  key = fiobj_str_new("nested", 6);
+  key = fiobj_string_new("nested", 6);
   ary = fiobj_hash_new2(2);
   fiobj_hash_set(data, key, ary);
   fiobj_free(key);
-  key = fiobj_str_new("item", 4);
-  fiobj_hash_set(ary, key, fiobj_str_new("dot notation success", 20));
+  key = fiobj_string_new("item", 4);
+  fiobj_hash_set(ary, key, fiobj_string_new("dot notation success", 20));
   fiobj_free(key);
   key = fiobj_mustache_build(m, data);
   fiobj_free(data);

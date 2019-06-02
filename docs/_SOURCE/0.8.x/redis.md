@@ -47,18 +47,18 @@ Th possible named arguments for the `redis_engine_create` function call are:
 
     Redis server's address, defaults to `"localhost"`.
 
-        fio_str_info_s address;
+        fio_string_info_s address;
 * `port`
  
     Redis server's port, defaults to `"6379"`.
 
-        fio_str_info_s port;
+        fio_string_info_s port;
 
 * `auth`
 
     Redis server's password, if any. */
 
-        fio_str_info_s auth;
+        fio_string_info_s auth;
 
 * `ping_interval`
 

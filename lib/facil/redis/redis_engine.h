@@ -18,11 +18,11 @@ extern "C" {
 /** possible arguments for the `redis_engine_create` function call */
 struct redis_engine_create_args {
   /** Redis server's address, defaults to localhost. */
-  fio_str_info_s address;
+  fio_string_info_s address;
   /** Redis server's port, defaults to 6379. */
-  fio_str_info_s port;
+  fio_string_info_s port;
   /** Redis server's password, if any. */
-  fio_str_info_s auth;
+  fio_string_info_s auth;
   /** A `ping` will be sent every `ping_interval` interval or inactivity. */
   uint8_t ping_interval;
 };

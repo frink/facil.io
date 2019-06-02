@@ -15,7 +15,7 @@ int main(int argc, char const *argv[]) {
 }
 
 static void on_response(http_s *h) {
-  if (h->status_str == FIOBJ_INVALID) {
+  if (h->status_string == FIOBJ_INVALID) {
     /* first response is always empty, nothing was sent yet */
     http_finish(h);
     return;

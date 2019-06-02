@@ -19,7 +19,7 @@ License: MIT
  */
 #include <fio_tmpfile.h>
 #include <fiobj_data.h>
-#include <fiobj_str.h>
+#include <fiobj_string.h>
 
 #include <assert.h>
 #include <errno.h>
@@ -93,7 +93,7 @@ static void fiobj_data_copy_parent(FIOBJ o) {
       perror("FATAL ERROR: (fiobj_data) can't create temporary file");
       exit(errno);
     }
-    fio_str_info_s data;
+    fio_string_info_s data;
     size_t pos = 0;
     do {
       ssize_t written;
@@ -195,10 +195,10 @@ static intptr_t fiobj_data_i(const FIOBJ o) {
 
 static size_t fiobj_data_is_true(const FIOBJ o) { return fiobj_data_i(o) > 0; }
 
-static fio_str_info_s fio_io2str(const FIOBJ o) {
+static fio_string_info_s fio_io2str(const FIOBJ o) {
   switch (obj2io(o)->fd) {
   case -1:
-    return (fio_str_info_s){.data = (char *)obj2io(o)->buffer,
+    return (fio_string_info_s){.data = (char *)obj2io(o)->buffer,
                             .len = obj2io(o)->len};
     break;
   case -2:
@@ -208,15 +208,15 @@ static fio_str_info_s fio_io2str(const FIOBJ o) {
   }
   int64_t i = fiobj_data_get_fd_size(o);
   if (i <= 0)
-    return (fio_str_info_s){.data = (char *)obj2io(o)->buffer,
+    return (fio_string_info_s){.data = (char *)obj2io(o)->buffer,
                             .len = obj2io(o)->len};
   obj2io(o)->len = 0;
   obj2io(o)->pos = 0;
   fiobj_data_pre_write((FIOBJ)o, i + 1);
   if (pread(obj2io(o)->fd, obj2io(o)->buffer, i, 0) != i)
-    return (fio_str_info_s){.data = NULL, .len = 0};
+    return (fio_string_info_s){.data = NULL, .len = 0};
   obj2io(o)->buffer[i] = 0;
-  return (fio_str_info_s){.data = (char *)obj2io(o)->buffer, .len = i};
+  return (fio_string_info_s){.data = (char *)obj2io(o)->buffer, .len = i};
 }
 
 static size_t fiobj_data_iseq(const FIOBJ self, const FIOBJ other) {
@@ -226,7 +226,7 @@ static size_t fiobj_data_iseq(const FIOBJ self, const FIOBJ other) {
 }
 
 uintptr_t fiobject___noop_count(FIOBJ o);
-double fiobject___noop_to_f(FIOBJ o);
+double fiobject___noop_to_float(FIOBJ o);
 
 const fiobj_object_vtable_s FIOBJECT_VTABLE_DATA = {
     .class_name = "IO",
@@ -323,7 +323,7 @@ Creating the IO object
 ***************************************************************************** */
 
 /** Creates a new local in-memory IO object */
-FIOBJ fiobj_data_newstr(void) {
+FIOBJ fiobj_data_new_string(void) {
   FIOBJ o = fiobj_data_alloc(fio_malloc(4096), -1);
   REQUIRE_MEM(obj2io(o)->buffer);
   obj2io(o)->capa = 4096;
@@ -336,7 +336,7 @@ FIOBJ fiobj_data_newstr(void) {
  * using the provided `dealloc` function pointer. Use a NULL `dealloc` function
  * pointer if the buffer is static and shouldn't be freed.
  */
-FIOBJ fiobj_data_newstr2(void *buffer, uintptr_t length,
+FIOBJ fiobj_data_new_string2(void *buffer, uintptr_t length,
                          void (*dealloc)(void *)) {
   FIOBJ o = fiobj_data_alloc(buffer, -1);
   obj2io(o)->capa = length;
@@ -366,7 +366,7 @@ FIOBJ fiobj_data_newtmpfile(void) {
 FIOBJ fiobj_data_slice(FIOBJ parent, intptr_t offset, uintptr_t length) {
   /* cut from the end */
   if (offset < 0) {
-    size_t parent_len = fiobj_data_len(parent);
+    size_t parent_len = fiobj_data_length(parent);
     offset = parent_len + 1 + offset;
   }
   if (offset < 0)
@@ -376,7 +376,7 @@ FIOBJ fiobj_data_slice(FIOBJ parent, intptr_t offset, uintptr_t length) {
     offset += obj2io(parent)->capa;
     parent = obj2io(parent)->source.parent;
   }
-  size_t parent_len = fiobj_data_len(parent);
+  size_t parent_len = fiobj_data_length(parent);
   if (parent_len <= (size_t)offset) {
     length = 0;
     offset = parent_len;
@@ -395,7 +395,7 @@ FIOBJ fiobj_data_slice(FIOBJ parent, intptr_t offset, uintptr_t length) {
 Saving the IO object
 ***************************************************************************** */
 
-static int fiobj_data_save_str(FIOBJ o, const char *filename) {
+static int fiobj_data_save_string(FIOBJ o, const char *filename) {
   int target = open(filename, O_RDWR | O_CREAT | O_TRUNC, 0777);
   if (target == -1)
     return -1;
@@ -447,7 +447,7 @@ static int fiobj_data_save_slice(FIOBJ o, const char *filename) {
   if (target == -1)
     return -1;
   errno = 0;
-  fio_str_info_s tmp;
+  fio_string_info_s tmp;
   size_t total = 0;
   do {
     tmp = fiobj_data_pread(obj2io(o)->source.parent, obj2io(o)->capa + total,
@@ -475,7 +475,7 @@ error:
 int fiobj_data_save(FIOBJ o, const char *filename) {
   switch (obj2io(o)->fd) {
   case -1:
-    return fiobj_data_save_str(o, filename);
+    return fiobj_data_save_string(o, filename);
     break;
   case -2:
     return fiobj_data_save_slice(o, filename);
@@ -490,10 +490,10 @@ Reading API
 ***************************************************************************** */
 
 /** Reads up to `length` bytes */
-static fio_str_info_s fiobj_data_read_str(FIOBJ io, intptr_t length) {
+static fio_string_info_s fiobj_data_read_string(FIOBJ io, intptr_t length) {
   if (obj2io(io)->pos == obj2io(io)->len) {
     /* EOF */
-    return (fio_str_info_s){.data = NULL, .len = 0};
+    return (fio_string_info_s){.data = NULL, .len = 0};
   }
 
   if (length <= 0) {
@@ -503,7 +503,7 @@ static fio_str_info_s fiobj_data_read_str(FIOBJ io, intptr_t length) {
 
   if (length <= 0) {
     /* We are at EOF - length or beyond */
-    return (fio_str_info_s){.data = NULL, .len = 0};
+    return (fio_string_info_s){.data = NULL, .len = 0};
   }
 
   /* reading length bytes */
@@ -511,17 +511,17 @@ static fio_str_info_s fiobj_data_read_str(FIOBJ io, intptr_t length) {
   obj2io(io)->pos = pos + length;
   if (obj2io(io)->pos > obj2io(io)->len)
     obj2io(io)->pos = obj2io(io)->len;
-  return (fio_str_info_s){
+  return (fio_string_info_s){
       .data = (char *)(obj2io(io)->buffer + pos),
       .len = (obj2io(io)->pos - pos),
   };
 }
 
 /** Reads up to `length` bytes */
-static fio_str_info_s fiobj_data_read_slice(FIOBJ io, intptr_t length) {
+static fio_string_info_s fiobj_data_read_slice(FIOBJ io, intptr_t length) {
   if (obj2io(io)->pos == obj2io(io)->len) {
     /* EOF */
-    return (fio_str_info_s){.data = NULL, .len = 0};
+    return (fio_string_info_s){.data = NULL, .len = 0};
   }
   if (length <= 0) {
     /* read to EOF - length */
@@ -530,7 +530,7 @@ static fio_str_info_s fiobj_data_read_slice(FIOBJ io, intptr_t length) {
 
   if (length <= 0) {
     /* We are at EOF - length or beyond */
-    return (fio_str_info_s){.data = NULL, .len = 0};
+    return (fio_string_info_s){.data = NULL, .len = 0};
   }
   register size_t pos = obj2io(io)->pos;
   obj2io(io)->pos = pos + length;
@@ -541,7 +541,7 @@ static fio_str_info_s fiobj_data_read_slice(FIOBJ io, intptr_t length) {
 }
 
 /** Reads up to `length` bytes */
-static fio_str_info_s fiobj_data_read_file(FIOBJ io, intptr_t length) {
+static fio_string_info_s fiobj_data_read_file(FIOBJ io, intptr_t length) {
   uintptr_t fsize = fiobj_data_get_fd_size(io);
 
   if (length <= 0) {
@@ -552,14 +552,14 @@ static fio_str_info_s fiobj_data_read_file(FIOBJ io, intptr_t length) {
   if (length <= 0) {
     /* We are at EOF - length or beyond */
     errno = 0;
-    return (fio_str_info_s){.data = NULL, .len = 0};
+    return (fio_string_info_s){.data = NULL, .len = 0};
   }
 
   /* reading length bytes */
   if (length + obj2io(io)->pos <= obj2io(io)->len) {
     /* the data already exists in the buffer */
     // fprintf(stderr, "in_buffer...\n");
-    fio_str_info_s data = {.data =
+    fio_string_info_s data = {.data =
                                (char *)(obj2io(io)->buffer + obj2io(io)->pos),
                            .len = (uintptr_t)length};
     obj2io(io)->pos += length;
@@ -578,9 +578,9 @@ static fio_str_info_s fiobj_data_read_file(FIOBJ io, intptr_t length) {
     if (l == -1 && errno == EINTR)
       goto retry_int;
     if (l == -1 || l == 0)
-      return (fio_str_info_s){.data = NULL, .len = 0};
+      return (fio_string_info_s){.data = NULL, .len = 0};
     obj2io(io)->source.fpos += l;
-    return (fio_str_info_s){.data = (char *)obj2io(io)->buffer, .len = l};
+    return (fio_string_info_s){.data = (char *)obj2io(io)->buffer, .len = l};
   }
 }
 
@@ -590,15 +590,15 @@ static fio_str_info_s fiobj_data_read_file(FIOBJ io, intptr_t length) {
  * The C string object will be invalidate the next time a function call to the
  * IO object is made.
  */
-fio_str_info_s fiobj_data_read(FIOBJ io, intptr_t length) {
+fio_string_info_s fiobj_data_read(FIOBJ io, intptr_t length) {
   if (!io || !FIOBJ_TYPE_IS(io, FIOBJ_T_DATA)) {
     errno = EFAULT;
-    return (fio_str_info_s){.data = NULL, .len = 0};
+    return (fio_string_info_s){.data = NULL, .len = 0};
   }
   errno = 0;
   switch (obj2io(io)->fd) {
   case -1:
-    return fiobj_data_read_str(io, length);
+    return fiobj_data_read_string(io, length);
     break;
   case -2:
     return fiobj_data_read_slice(io, length);
@@ -612,14 +612,14 @@ fio_str_info_s fiobj_data_read(FIOBJ io, intptr_t length) {
 Tokenize (read2ch)
 ***************************************************************************** */
 
-static fio_str_info_s fiobj_data_read2ch_str(FIOBJ io, uint8_t token) {
+static fio_string_info_s fiobj_data_read2ch_string(FIOBJ io, uint8_t token) {
   if (obj2io(io)->pos == obj2io(io)->len) /* EOF */
-    return (fio_str_info_s){.data = NULL, .len = 0};
+    return (fio_string_info_s){.data = NULL, .len = 0};
 
   uint8_t *pos = obj2io(io)->buffer + obj2io(io)->pos;
   uint8_t *lim = obj2io(io)->buffer + obj2io(io)->len;
   swallow_ch(&pos, lim, token);
-  fio_str_info_s ret = (fio_str_info_s){
+  fio_string_info_s ret = (fio_string_info_s){
       .data = (char *)obj2io(io)->buffer + obj2io(io)->pos,
       .len = (uintptr_t)(pos - obj2io(io)->buffer) - obj2io(io)->pos,
   };
@@ -627,12 +627,12 @@ static fio_str_info_s fiobj_data_read2ch_str(FIOBJ io, uint8_t token) {
   return ret;
 }
 
-static fio_str_info_s fiobj_data_read2ch_slice(FIOBJ io, uint8_t token) {
+static fio_string_info_s fiobj_data_read2ch_slice(FIOBJ io, uint8_t token) {
   if (obj2io(io)->pos == obj2io(io)->len) /* EOF */
-    return (fio_str_info_s){.data = NULL, .len = 0};
+    return (fio_string_info_s){.data = NULL, .len = 0};
   size_t old_pos = obj2io(obj2io(io)->source.parent)->pos;
   obj2io(obj2io(io)->source.parent)->pos = obj2io(io)->capa + obj2io(io)->pos;
-  fio_str_info_s tmp = fiobj_data_read2ch(obj2io(io)->source.parent, token);
+  fio_string_info_s tmp = fiobj_data_read2ch(obj2io(io)->source.parent, token);
   obj2io(obj2io(io)->source.parent)->pos = old_pos;
   if (tmp.len + obj2io(io)->pos > obj2io(io)->len) {
     /* EOF */
@@ -643,7 +643,7 @@ static fio_str_info_s fiobj_data_read2ch_slice(FIOBJ io, uint8_t token) {
   return tmp;
 }
 
-static fio_str_info_s fiobj_data_read2ch_file(FIOBJ io, uint8_t token) {
+static fio_string_info_s fiobj_data_read2ch_file(FIOBJ io, uint8_t token) {
   uint8_t *pos = obj2io(io)->buffer + obj2io(io)->pos;
   uint8_t *lim = obj2io(io)->buffer + obj2io(io)->len;
   if (pos != lim && swallow_ch(&pos, lim, token)) {
@@ -652,7 +652,7 @@ static fio_str_info_s fiobj_data_read2ch_file(FIOBJ io, uint8_t token) {
         (uintptr_t)(pos - (obj2io(io)->buffer + obj2io(io)->pos));
     obj2io(io)->pos += delta;
     obj2io(io)->source.fpos += delta;
-    return (fio_str_info_s){
+    return (fio_string_info_s){
         .data =
             (char *)(delta ? ((obj2io(io)->buffer + obj2io(io)->pos) - delta)
                            : NULL),
@@ -672,11 +672,11 @@ static fio_str_info_s fiobj_data_read2ch_file(FIOBJ io, uint8_t token) {
     if (tmp < 0 && errno == EINTR)
       goto retry_int;
     if (tmp < 0 || (tmp == 0 && obj2io(io)->len == 0)) {
-      return (fio_str_info_s){.data = NULL, .len = 0};
+      return (fio_string_info_s){.data = NULL, .len = 0};
     }
     if (tmp == 0) {
       obj2io(io)->source.fpos += obj2io(io)->len;
-      return (fio_str_info_s){.data = (char *)obj2io(io)->buffer,
+      return (fio_string_info_s){.data = (char *)obj2io(io)->buffer,
                               .len = obj2io(io)->len};
     }
     obj2io(io)->len += tmp;
@@ -687,7 +687,7 @@ static fio_str_info_s fiobj_data_read2ch_file(FIOBJ io, uint8_t token) {
           (uintptr_t)(pos - (obj2io(io)->buffer + obj2io(io)->pos));
       obj2io(io)->pos = delta;
       obj2io(io)->source.fpos += delta;
-      return (fio_str_info_s){
+      return (fio_string_info_s){
           .data = (char *)obj2io(io)->buffer,
           .len = delta,
       };
@@ -706,14 +706,14 @@ static fio_str_info_s fiobj_data_read2ch_file(FIOBJ io, uint8_t token) {
  * The C string object will be invalidate the next time a function call to the
  * IO object is made.
  */
-fio_str_info_s fiobj_data_read2ch(FIOBJ io, uint8_t token) {
+fio_string_info_s fiobj_data_read2ch(FIOBJ io, uint8_t token) {
   if (!io || !FIOBJ_TYPE_IS(io, FIOBJ_T_DATA)) {
     errno = EFAULT;
-    return (fio_str_info_s){.data = NULL, .len = 0};
+    return (fio_string_info_s){.data = NULL, .len = 0};
   }
   switch (obj2io(io)->fd) {
   case -1:
-    return fiobj_data_read2ch_str(io, token);
+    return fiobj_data_read2ch_string(io, token);
     break;
   case -2:
     return fiobj_data_read2ch_slice(io, token);
@@ -746,7 +746,7 @@ intptr_t fiobj_data_pos(FIOBJ io) {
 /**
  * Returns the length of the stream.
  */
-intptr_t fiobj_data_len(FIOBJ io) {
+intptr_t fiobj_data_length(FIOBJ io) {
   if (!io || !FIOBJ_TYPE_IS(io, FIOBJ_T_DATA))
     return -1;
   return fiobj_data_i(io);
@@ -820,7 +820,7 @@ void fiobj_data_seek(FIOBJ io, intptr_t position) {
 //   default:
 // }
 
-static fio_str_info_s fiobj_data_pread_str(FIOBJ io, intptr_t start_at,
+static fio_string_info_s fiobj_data_pread_string(FIOBJ io, intptr_t start_at,
                                            uintptr_t length) {
   if (start_at < 0)
     start_at = obj2io(io)->len + start_at;
@@ -831,16 +831,16 @@ static fio_str_info_s fiobj_data_pread_str(FIOBJ io, intptr_t start_at,
   if (length + start_at > obj2io(io)->len)
     length = obj2io(io)->len - start_at;
   if (length == 0)
-    return (fio_str_info_s){
+    return (fio_string_info_s){
         .data = NULL,
         .len = 0,
     };
-  return (fio_str_info_s){
+  return (fio_string_info_s){
       .data = (char *)obj2io(io)->buffer + start_at,
       .len = length,
   };
 }
-static fio_str_info_s fiobj_data_pread_slice(FIOBJ io, intptr_t start_at,
+static fio_string_info_s fiobj_data_pread_slice(FIOBJ io, intptr_t start_at,
                                              uintptr_t length) {
   if (start_at < 0)
     start_at = obj2io(io)->len + start_at;
@@ -851,14 +851,14 @@ static fio_str_info_s fiobj_data_pread_slice(FIOBJ io, intptr_t start_at,
   if (length + start_at > obj2io(io)->len)
     length = obj2io(io)->len - start_at;
   if (length == 0)
-    return (fio_str_info_s){
+    return (fio_string_info_s){
         .data = NULL,
         .len = 0,
     };
   return fiobj_data_pread(obj2io(io)->source.parent, start_at, length);
 }
 
-static fio_str_info_s fiobj_data_pread_file(FIOBJ io, intptr_t start_at,
+static fio_string_info_s fiobj_data_pread_file(FIOBJ io, intptr_t start_at,
                                             uintptr_t length) {
   const int64_t size = fiobj_data_get_fd_size(io);
   if (start_at < 0)
@@ -872,7 +872,7 @@ static fio_str_info_s fiobj_data_pread_file(FIOBJ io, intptr_t start_at,
     obj2io(io)->capa = 0;
     fio_free(obj2io(io)->buffer);
     obj2io(io)->buffer = NULL;
-    return (fio_str_info_s){
+    return (fio_string_info_s){
         .data = NULL,
         .len = 0,
     };
@@ -882,13 +882,13 @@ static fio_str_info_s fiobj_data_pread_file(FIOBJ io, intptr_t start_at,
   fiobj_data_pre_write(io, length + 1);
   ssize_t tmp = pread(obj2io(io)->fd, obj2io(io)->buffer, length, start_at);
   if (tmp <= 0) {
-    return (fio_str_info_s){
+    return (fio_string_info_s){
         .data = NULL,
         .len = 0,
     };
   }
   obj2io(io)->buffer[tmp] = 0;
-  return (fio_str_info_s){
+  return (fio_string_info_s){
       .data = (char *)obj2io(io)->buffer,
       .len = tmp,
   };
@@ -901,10 +901,10 @@ static fio_str_info_s fiobj_data_pread_file(FIOBJ io, intptr_t start_at,
  * The C string object will be invalidate the next time a function call to the
  * IO object is made.
  */
-fio_str_info_s fiobj_data_pread(FIOBJ io, intptr_t start_at, uintptr_t length) {
+fio_string_info_s fiobj_data_pread(FIOBJ io, intptr_t start_at, uintptr_t length) {
   if (!io || !FIOBJ_TYPE_IS(io, FIOBJ_T_DATA)) {
     errno = EFAULT;
-    return (fio_str_info_s){
+    return (fio_string_info_s){
         .data = NULL,
         .len = 0,
     };
@@ -913,7 +913,7 @@ fio_str_info_s fiobj_data_pread(FIOBJ io, intptr_t start_at, uintptr_t length) {
   errno = 0;
   switch (obj2io(io)->fd) {
   case -1:
-    return fiobj_data_pread_str(io, start_at, length);
+    return fiobj_data_pread_string(io, start_at, length);
     break;
   case -2:
     return fiobj_data_pread_slice(io, start_at, length);
@@ -1019,15 +1019,15 @@ intptr_t fiobj_data_puts(FIOBJ io, void *buffer, uintptr_t length) {
 void fiobj_data_test(void) {
   char *filename = NULL;
   FIOBJ text;
-  fio_str_info_s s1, s2;
+  fio_string_info_s s1, s2;
   fprintf(stderr, "=== testing fiobj_data\n");
   if (filename) {
-    text = fiobj_str_buf(0);
-    fiobj_str_readfile(text, filename, 0, 0);
+    text = fiobj_string_buffer(0);
+    fiobj_string_readfile(text, filename, 0, 0);
   } else
-    text = fiobj_str_new("Line 1\r\nLine 2\nLine 3 unended", 29);
-  FIOBJ strio = fiobj_data_newstr();
-  fprintf(stderr, "* `newstr` passed.\n");
+    text = fiobj_string_new("Line 1\r\nLine 2\nLine 3 unended", 29);
+  FIOBJ strio = fiobj_data_new_string();
+  fprintf(stderr, "* `new_string` passed.\n");
   FIOBJ fdio = fiobj_data_newtmpfile();
   fprintf(stderr, "* `newtmpfile` passed.\n");
   fiobj_data_write(fdio, fiobj_obj2cstr(text).data, fiobj_obj2cstr(text).len);
@@ -1130,14 +1130,14 @@ void fiobj_data_test(void) {
   {
     fiobj_data_seek(sliceio, 0);
     s1 = fiobj_data_read(sliceio, 4096);
-    if (s1.len != (size_t)fiobj_data_len(sliceio) || !s1.data) {
+    if (s1.len != (size_t)fiobj_data_length(sliceio) || !s1.data) {
       fprintf(stderr, "* `fiobj_data_slice` data lost? FAILED!\n");
       fprintf(stderr,
               "* `fiobj_data_slice` s1.len = %zu (out of %zu) s1.data = %s!\n",
-              s1.len, (size_t)fiobj_data_len(sliceio), s1.data);
+              s1.len, (size_t)fiobj_data_length(sliceio), s1.data);
       exit(-1);
     }
-    size_t old_len = fiobj_data_len(sliceio);
+    size_t old_len = fiobj_data_length(sliceio);
     fiobj_data_write(sliceio, "hi", 2);
     fiobj_data_seek(sliceio, 0);
     s1 = fiobj_data_read(sliceio, 4096);
@@ -1145,7 +1145,7 @@ void fiobj_data_test(void) {
       fprintf(stderr, "* `fiobj_data_write` for Slice data lost? FAILED!\n");
       fprintf(stderr,
               "* `fiobj_data_slice` s1.len = %zu (out of %zu) s1.data = %s!\n",
-              s1.len, (size_t)fiobj_data_len(sliceio), s1.data);
+              s1.len, (size_t)fiobj_data_length(sliceio), s1.data);
       exit(-1);
     }
   }
@@ -1160,14 +1160,14 @@ void fiobj_data_test(void) {
 #include <fiobj_data.h>
 
 /** Creates a new local in-memory IO object */
-FIOBJ fiobj_data_newstr(void) { return FIOBJ_INVALID; }
+FIOBJ fiobj_data_new_string(void) { return FIOBJ_INVALID; }
 
 /**
  * Creates a IO object from an existing buffer. The buffer will be deallocated
  * using the provided `dealloc` function pointer. Use a NULL `dealloc` function
  * pointer if the buffer is static and shouldn't be freed.
  */
-FIOBJ fiobj_data_newstr2(void *buffer, uintptr_t length,
+FIOBJ fiobj_data_new_string2(void *buffer, uintptr_t length,
                          void (*dealloc)(void *)) {
   return FIOBJ_INVALID;
 }

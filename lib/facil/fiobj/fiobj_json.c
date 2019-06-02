@@ -3,8 +3,8 @@ Copyright: Boaz Segev, 2017-2019
 License: MIT
 */
 #include <fiobj_json.h>
-#define FIO_ARY_NAME fio_json_stack
-#define FIO_ARY_TYPE FIOBJ
+#define FIO_ARRAY_NAME fio_json_stack
+#define FIO_ARRAY_TYPE FIOBJ
 #include <fio-stl.h>
 
 #include <fio_json_parser.h>
@@ -57,7 +57,7 @@ static inline void fiobj_json_add2parser(fiobj_json_parser_s *p, FIOBJ o) {
         p->key = o;
       }
     } else {
-      fiobj_ary_push(p->top, o);
+      fiobj_array_push(p->top, o);
     }
   } else {
     p->top = o;
@@ -86,9 +86,9 @@ static void fio_json_on_float(json_parser_s *p, double f) {
 }
 /** a String was detected (int / float). update `pos` to point at ending */
 static void fio_json_on_string(json_parser_s *p, void *start, size_t length) {
-  FIOBJ str = fiobj_str_buf(length);
-  fiobj_str_resize(
-      str, fio_json_unescape_str(fiobj_obj2cstr(str).data, start, length));
+  FIOBJ str = fiobj_string_buffer(length);
+  fiobj_string_resize(
+      str, fio_json_unescape_string(fiobj_obj2cstr(str).data, start, length));
   fiobj_json_add2parser((fiobj_json_parser_s *)p, str);
 }
 /** a dictionary object was detected */
@@ -126,7 +126,7 @@ static int fio_json_on_start_array(json_parser_s *p) {
   fiobj_json_parser_s *pr = (fiobj_json_parser_s *)p;
   if (pr->target)
     return -1;
-  FIOBJ ary = fiobj_ary_new();
+  FIOBJ ary = fiobj_array_new();
   fiobj_json_add2parser(pr, ary);
   fio_json_stack_push(&pr->stack, pr->top);
   pr->top = ary;
@@ -143,7 +143,7 @@ static void fio_json_on_end_array(json_parser_s *p) {
 /** the JSON parsing is complete */
 static void fio_json_on_json(json_parser_s *p) {
   // fiobj_json_parser_s *pr = (fiobj_json_parser_s *)p;
-  // FIO_ARY_FOR(&pr->stack, pos) { fiobj_free((FIOBJ)pos.obj); }
+  // FIO_ARRAY_FOR(&pr->stack, pos) { fiobj_free((FIOBJ)pos.obj); }
   // fio_json_stack_destroy(&pr->stack);
   (void)p; /* nothing special... right? */
 }
@@ -164,27 +164,27 @@ JSON formatting
 ***************************************************************************** */
 
 /** Writes a JSON friendly version of the src String */
-static void write_safe_str(FIOBJ dest, const FIOBJ str) {
-  fio_str_info_s s = fiobj_obj2cstr(str);
-  fio_str_info_s t = fiobj_obj2cstr(dest);
+static void write_safe_string(FIOBJ dest, const FIOBJ str) {
+  fio_string_info_s s = fiobj_obj2cstr(str);
+  fio_string_info_s t = fiobj_obj2cstr(dest);
   t.data[t.len] = '"';
   t.len++;
-  fiobj_str_resize(dest, t.len);
+  fiobj_string_resize(dest, t.len);
   t = fiobj_obj2cstr(dest);
   const uint8_t *restrict src = (const uint8_t *)s.data;
   size_t len = s.len;
   uint64_t end = t.len;
   /* make sure we have some room */
   size_t added = 0;
-  size_t capa = fiobj_str_capa(dest);
+  size_t capa = fiobj_string_capacity(dest);
   if (capa <= end + s.len + 64) {
     if (0) {
       capa = (((capa >> 12) + 1) << 12) - 1;
-      capa = fiobj_str_capa_assert(dest, capa);
+      capa = fiobj_string_capacity_assert(dest, capa);
     } else {
-      capa = fiobj_str_capa_assert(dest, (end + s.len + 64));
+      capa = fiobj_string_capacity_assert(dest, (end + s.len + 64));
     }
-    fio_str_info_s tmp = fiobj_obj2cstr(dest);
+    fio_string_info_s tmp = fiobj_obj2cstr(dest);
     t = tmp;
   }
   while (len) {
@@ -246,8 +246,8 @@ static void write_safe_str(FIOBJ dest, const FIOBJ str) {
     len--;
     if (added >= 48 && capa <= end + len + 64) {
       writer[end] = 0;
-      fiobj_str_resize(dest, end);
-      fiobj_str_capa_assert(dest, (end + len + 64));
+      fiobj_string_resize(dest, end);
+      fiobj_string_capacity_assert(dest, (end + len + 64));
       t = fiobj_obj2cstr(dest);
       writer = (char *)t.data;
       capa = t.capa;
@@ -255,7 +255,7 @@ static void write_safe_str(FIOBJ dest, const FIOBJ str) {
     }
   }
   t.data[end++] = '"';
-  fiobj_str_resize(dest, end);
+  fiobj_string_resize(dest, end);
 }
 
 typedef struct {
@@ -270,8 +270,8 @@ static int fiobj_obj2json_task(FIOBJ o, void *data_) {
   obj2json_data_s *data = data_;
   uint8_t add_seperator = 1;
   if (fiobj_hash_key_in_loop()) {
-    write_safe_str(data->dest, fiobj_hash_key_in_loop());
-    fiobj_str_write(data->dest, ":", 1);
+    write_safe_string(data->dest, fiobj_hash_key_in_loop());
+    fiobj_string_write(data->dest, ":", 1);
   }
   switch (FIOBJ_TYPE(o)) {
   case FIOBJ_T_NUMBER:
@@ -279,14 +279,14 @@ static int fiobj_obj2json_task(FIOBJ o, void *data_) {
   case FIOBJ_T_TRUE:
   case FIOBJ_T_FALSE:
   case FIOBJ_T_FLOAT:
-    fiobj_str_join(data->dest, o);
+    fiobj_string_join(data->dest, o);
     --data->count;
     break;
 
   case FIOBJ_T_DATA:
   case FIOBJ_T_UNKNOWN:
   case FIOBJ_T_STRING:
-    write_safe_str(data->dest, o);
+    write_safe_string(data->dest, o);
     --data->count;
     break;
 
@@ -295,8 +295,8 @@ static int fiobj_obj2json_task(FIOBJ o, void *data_) {
     fio_json_stack_push(data->stack, data->parent);
     fio_json_stack_push(data->stack, (FIOBJ)data->count);
     data->parent = o;
-    data->count = fiobj_ary_count(o);
-    fiobj_str_write(data->dest, "[", 1);
+    data->count = fiobj_array_count(o);
+    fiobj_string_write(data->dest, "[", 1);
     add_seperator = 0;
     break;
 
@@ -306,19 +306,19 @@ static int fiobj_obj2json_task(FIOBJ o, void *data_) {
     fio_json_stack_push(data->stack, (FIOBJ)data->count);
     data->parent = o;
     data->count = fiobj_hash_count(o);
-    fiobj_str_write(data->dest, "{", 1);
+    fiobj_string_write(data->dest, "{", 1);
     add_seperator = 0;
     break;
   }
   if (data->pretty) {
-    fiobj_str_capa_assert(data->dest,
+    fiobj_string_capacity_assert(data->dest,
                           fiobj_obj2cstr(data->dest).len +
                               (fio_json_stack_count(data->stack) * 5));
     while (!data->count && data->parent) {
       if (FIOBJ_TYPE_IS(data->parent, FIOBJ_T_HASH)) {
-        fiobj_str_write(data->dest, "}", 1);
+        fiobj_string_write(data->dest, "}", 1);
       } else {
-        fiobj_str_write(data->dest, "]", 1);
+        fiobj_string_write(data->dest, "]", 1);
       }
       add_seperator = 1;
       data->count = 0;
@@ -328,26 +328,26 @@ static int fiobj_obj2json_task(FIOBJ o, void *data_) {
     }
 
     if (add_seperator && data->parent) {
-      fiobj_str_write(data->dest, ",\n", 2);
+      fiobj_string_write(data->dest, ",\n", 2);
       uintptr_t indent = fio_json_stack_count(data->stack) - 1;
-      fiobj_str_capa_assert(data->dest,
+      fiobj_string_capacity_assert(data->dest,
                             fiobj_obj2cstr(data->dest).len + (indent * 2));
-      fio_str_info_s buf = fiobj_obj2cstr(data->dest);
+      fio_string_info_s buf = fiobj_obj2cstr(data->dest);
       while (indent--) {
         buf.data[buf.len++] = ' ';
         buf.data[buf.len++] = ' ';
       }
-      fiobj_str_resize(data->dest, buf.len);
+      fiobj_string_resize(data->dest, buf.len);
     }
   } else {
-    fiobj_str_capa_assert(data->dest,
+    fiobj_string_capacity_assert(data->dest,
                           fiobj_obj2cstr(data->dest).len +
                               (fio_json_stack_count(data->stack) << 1));
     while (!data->count && data->parent) {
       if (FIOBJ_TYPE_IS(data->parent, FIOBJ_T_HASH)) {
-        fiobj_str_write(data->dest, "}", 1);
+        fiobj_string_write(data->dest, "}", 1);
       } else {
-        fiobj_str_write(data->dest, "]", 1);
+        fiobj_string_write(data->dest, "]", 1);
       }
       add_seperator = 1;
       data->count = 0;
@@ -357,7 +357,7 @@ static int fiobj_obj2json_task(FIOBJ o, void *data_) {
     }
 
     if (add_seperator && data->parent) {
-      fiobj_str_write(data->dest, ",", 1);
+      fiobj_string_write(data->dest, ",", 1);
     }
   }
 
@@ -418,10 +418,10 @@ size_t fiobj_hash_update_json(FIOBJ hash, const void *data, size_t len) {
 FIOBJ fiobj_obj2json2(FIOBJ dest, FIOBJ o, uint8_t pretty) {
   assert(dest && FIOBJ_TYPE_IS(dest, FIOBJ_T_STRING));
   if (!o) {
-    fiobj_str_write(dest, "null", 4);
+    fiobj_string_write(dest, "null", 4);
     return 0;
   }
-  fio_json_stack_s stack = FIO_ARY_INIT;
+  fio_json_stack_s stack = FIO_ARRAY_INIT;
   obj2json_data_s data = {
       .dest = dest,
       .stack = &stack,
@@ -439,7 +439,7 @@ FIOBJ fiobj_obj2json2(FIOBJ dest, FIOBJ o, uint8_t pretty) {
 
 /* Formats an object into a JSON string. Remember to `fiobj_free`. */
 FIOBJ fiobj_obj2json(FIOBJ obj, uint8_t pretty) {
-  return fiobj_obj2json2(fiobj_str_buf(128), obj, pretty);
+  return fiobj_obj2json2(fiobj_string_buf(128), obj, pretty);
 }
 
 /* *****************************************************************************
@@ -455,11 +455,11 @@ void fiobj_test_json(void) {
     fprintf(stderr, "\n !!! Testing failed !!!\n");                            \
     exit(-1);                                                                  \
   }
-  char json_str[] = "{\"array\":[1,2,3,\"boom\"],\"my\":{\"secret\":42},"
+  char json_string[] = "{\"array\":[1,2,3,\"boom\"],\"my\":{\"secret\":42},"
                     "\"true\":true,\"false\":false,\"null\":null,\"float\":-2."
                     "2,\"string\":\"I \\\"wrote\\\" this.\"}";
-  char json_str_update[] = "{\"array\":[1,2,3]}";
-  char json_str2[] =
+  char json_string_update[] = "{\"array\":[1,2,3]}";
+  char json_string_to_[] =
       "[\n    \"JSON Test Pattern pass1\",\n    {\"object with 1 "
       "member\":[\"array with 1 element\"]},\n    {},\n    [],\n    -42,\n    "
       "true,\n    false,\n    null,\n    {\n        \"integer\": 1234567890,\n "
@@ -513,15 +513,15 @@ void fiobj_test_json(void) {
   FIOBJ tmp = fiobj_hash_get2(o, fiobj_hash_string("array", 5));
   TEST_ASSERT(FIOBJ_TYPE_IS(tmp, FIOBJ_T_ARRAY),
               "JSON 'array' not an Array!\n");
-  TEST_ASSERT(fiobj_obj2num(fiobj_ary_index(tmp, 0)) == 1,
+  TEST_ASSERT(fiobj_obj2num(fiobj_array_index(tmp, 0)) == 1,
               "JSON 'array' index 0 error!\n");
-  TEST_ASSERT(fiobj_obj2num(fiobj_ary_index(tmp, 1)) == 2,
+  TEST_ASSERT(fiobj_obj2num(fiobj_array_index(tmp, 1)) == 2,
               "JSON 'array' index 1 error!\n");
-  TEST_ASSERT(fiobj_obj2num(fiobj_ary_index(tmp, 2)) == 3,
+  TEST_ASSERT(fiobj_obj2num(fiobj_array_index(tmp, 2)) == 3,
               "JSON 'array' index 2 error!\n");
-  TEST_ASSERT(FIOBJ_TYPE_IS(fiobj_ary_index(tmp, 3), FIOBJ_T_STRING),
+  TEST_ASSERT(FIOBJ_TYPE_IS(fiobj_array_index(tmp, 3), FIOBJ_T_STRING),
               "JSON 'array' index 3 type error!\n");
-  TEST_ASSERT(!memcmp("boom", fiobj_obj2cstr(fiobj_ary_index(tmp, 3)).data, 4),
+  TEST_ASSERT(!memcmp("boom", fiobj_obj2cstr(fiobj_array_index(tmp, 3)).data, 4),
               "JSON 'array' index 3 error!\n");
   tmp = fiobj_hash_get2(o, fiobj_hash_string("my", 2));
   TEST_ASSERT(FIOBJ_TYPE_IS(tmp, FIOBJ_T_HASH),
@@ -555,14 +555,14 @@ void fiobj_test_json(void) {
   if (!strcmp(fiobj_obj2cstr(tmp).data, json_str))
     fprintf(stderr, "* Stringify == Original.\n");
   TEST_ASSERT(
-      fiobj_hash_update_json(o, json_str_update, strlen(json_str_update)),
+      fiobj_hash_update_json(o, json_string_update, strlen(json_string_update)),
       "JSON update failed to parse data.");
   fiobj_free(tmp);
 
   tmp = fiobj_hash_get2(o, fiobj_hash_string("array", 5));
   TEST_ASSERT(FIOBJ_TYPE_IS(tmp, FIOBJ_T_ARRAY),
               "JSON updated 'array' not an Array!\n");
-  TEST_ASSERT(fiobj_ary_count(tmp) == 3, "JSON updated 'array' not updated?");
+  TEST_ASSERT(fiobj_array_count(tmp) == 3, "JSON updated 'array' not updated?");
   tmp = fiobj_hash_get2(o, fiobj_hash_string("float", 5));
   TEST_ASSERT(FIOBJ_TYPE_IS(tmp, FIOBJ_T_FLOAT),
               "JSON updated (old) 'float' missing!\n");
@@ -576,7 +576,7 @@ void fiobj_test_json(void) {
               "JSON G clef container has an incorrect type! (%s)\n",
               fiobj_type_name(o));
   tmp = o;
-  o = fiobj_ary_pop(o);
+  o = fiobj_array_pop(o);
   fiobj_free(tmp);
   TEST_ASSERT(FIOBJ_TYPE_IS(o, FIOBJ_T_STRING),
               "JSON G clef String incorrect type! %p => %s\n", (void *)o,
@@ -603,11 +603,11 @@ void fiobj_test_json(void) {
       (int)fiobj_obj2cstr(o).len, fiobj_obj2cstr(o).data,
       fiobj_obj2cstr(o).data + 3);
   fiobj_free(o);
-  size_t consumed = fiobj_json2obj(&o, json_str2, sizeof(json_str2));
+  size_t consumed = fiobj_json2obj(&o, json_string_to_, sizeof(json_string_to_));
   TEST_ASSERT(
-      consumed == (sizeof(json_str2) - 1),
+      consumed == (sizeof(json_string_to_) - 1),
       "JSON messy string failed to parse (consumed %lu instead of %lu\n",
-      (unsigned long)consumed, (unsigned long)(sizeof(json_str2) - 1));
+      (unsigned long)consumed, (unsigned long)(sizeof(json_string_to_) - 1));
   TEST_ASSERT(FIOBJ_TYPE_IS(o, FIOBJ_T_ARRAY),
               "JSON messy string object error\n");
   tmp = fiobj_obj2json(o, 1);

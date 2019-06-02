@@ -10,8 +10,8 @@ types, abstracting some complexity and making dynamic type related tasks easier.
 
 #include <fiobject.h>
 
-#define FIO_ARY_NAME fiobj_stack
-#define FIO_ARY_TYPE FIOBJ
+#define FIO_ARRAY_NAME fiobj_stack
+#define FIO_ARRAY_TYPE FIOBJ
 /* don't free or compare objects, this stack shouldn't have side-effects */
 #include <fio-stl.h>
 
@@ -338,7 +338,7 @@ size_t fiobj_each2(FIOBJ o, int (*task)(FIOBJ obj, void *arg), void *arg) {
   if (task(o, arg) == -1)
     return 1;
   uintptr_t pos = 0;
-  fiobj_stack_s stack = FIO_ARY_INIT;
+  fiobj_stack_s stack = FIO_ARRAY_INIT;
   struct task_packet_s packet = {
       .task = task,
       .arg = arg,
@@ -399,7 +399,7 @@ static void fiobj_dealloc_task(FIOBJ o, void *stack_) {
  * also freed.
  */
 void fiobj_free_complex_object(FIOBJ o) {
-  fiobj_stack_s stack = FIO_ARY_INIT;
+  fiobj_stack_s stack = FIO_ARRAY_INIT;
   do {
     FIOBJECT2VTBL(o)->dealloc(o, fiobj_dealloc_task, &stack);
   } while (!fiobj_stack_pop(&stack, &o));
@@ -438,7 +438,7 @@ int fiobj_iseq____internal_complex__(FIOBJ o, FIOBJ o2) {
   // if (FIOBJECT2VTBL(o)->each && FIOBJECT2VTBL(o)->count(o))
   //   return int fiobj_iseq____internal_complex__(const FIOBJ o, const FIOBJ
   //   o2);
-  fiobj_stack_s left = FIO_ARY_INIT, right = FIO_ARY_INIT, queue = FIO_ARY_INIT;
+  fiobj_stack_s left = FIO_ARRAY_INIT, right = FIO_ARRAY_INIT, queue = FIO_ARRAY_INIT;
   do {
     fiobj_each1(o, 0, fiobj_iseq____internal_complex__task, &left);
     fiobj_each1(o2, 0, fiobj_iseq____internal_complex__task, &right);
@@ -499,22 +499,22 @@ size_t fiobject___noop_is_eq(const FIOBJ o1, const FIOBJ o2) {
   return 0;
 }
 
-fio_str_info_s fiobject___noop_to_str(const FIOBJ o) {
+fio_string_info_s fiobject___noop_to_string(const FIOBJ o) {
   (void)o;
-  return (fio_str_info_s){.len = 0, .data = NULL};
+  return (fio_string_info_s){.len = 0, .data = NULL};
 }
-intptr_t fiobject___noop_to_i(const FIOBJ o) {
+intptr_t fiobject___noop_to_integer(const FIOBJ o) {
   (void)o;
   return 0;
 }
-double fiobject___noop_to_f(const FIOBJ o) {
+double fiobject___noop_to_float(const FIOBJ o) {
   (void)o;
   return 0;
 }
 
 #if DEBUG
 
-#include <fiobj_ary.h>
+#include <fiobj_array.h>
 #include <fiobj_numbers.h>
 
 static int fiobject_test_task(FIOBJ o, void *arg) {
@@ -556,16 +556,16 @@ void fiobj_test_core(void) {
   fiobj_free(o); /* testing for crash*/
   fprintf(stderr, "* passed.\n");
   fprintf(stderr, "=== Testing fioj_each2\n");
-  o = fiobj_ary_new2(4);
-  FIOBJ tmp = fiobj_ary_new();
-  fiobj_ary_push(o, tmp);
-  fiobj_ary_push(o, fiobj_true());
-  fiobj_ary_push(o, fiobj_null());
-  fiobj_ary_push(o, fiobj_num_new(10));
-  fiobj_ary_push(tmp, fiobj_num_new(13));
-  fiobj_ary_push(tmp, fiobj_hash_new());
-  FIOBJ key = fiobj_str_new("my key", 6);
-  fiobj_hash_set(fiobj_ary_entry(tmp, -1), key, fiobj_true());
+  o = fiobj_array_new2(4);
+  FIOBJ tmp = fiobj_array_new();
+  fiobj_array_push(o, tmp);
+  fiobj_array_push(o, fiobj_true());
+  fiobj_array_push(o, fiobj_null());
+  fiobj_array_push(o, fiobj_num_new(10));
+  fiobj_array_push(tmp, fiobj_num_new(13));
+  fiobj_array_push(tmp, fiobj_hash_new());
+  FIOBJ key = fiobj_string_new("my key", 6);
+  fiobj_hash_set(fiobj_array_entry(tmp, -1), key, fiobj_true());
   fiobj_free(key);
   /* we have root array + 4 children (w/ array) + 2 children (w/ hash) + 1 */
   uintptr_t count = 0;
@@ -578,16 +578,16 @@ void fiobj_test_core(void) {
               (int)count)
   fprintf(stderr, "* passed.\n");
   fprintf(stderr, "=== Testing fioj_iseq with nested items\n");
-  FIOBJ o2 = fiobj_ary_new2(4);
-  tmp = fiobj_ary_new();
-  fiobj_ary_push(o2, tmp);
-  fiobj_ary_push(o2, fiobj_true());
-  fiobj_ary_push(o2, fiobj_null());
-  fiobj_ary_push(o2, fiobj_num_new(10));
-  fiobj_ary_push(tmp, fiobj_num_new(13));
-  fiobj_ary_push(tmp, fiobj_hash_new());
-  key = fiobj_str_new("my key", 6);
-  fiobj_hash_set(fiobj_ary_entry(tmp, -1), key, fiobj_true());
+  FIOBJ o2 = fiobj_array_new2(4);
+  tmp = fiobj_array_new();
+  fiobj_array_push(o2, tmp);
+  fiobj_array_push(o2, fiobj_true());
+  fiobj_array_push(o2, fiobj_null());
+  fiobj_array_push(o2, fiobj_num_new(10));
+  fiobj_array_push(tmp, fiobj_num_new(13));
+  fiobj_array_push(tmp, fiobj_hash_new());
+  key = fiobj_string_new("my key", 6);
+  fiobj_hash_set(fiobj_array_entry(tmp, -1), key, fiobj_true());
   fiobj_free(key);
   TEST_ASSERT(!fiobj_iseq(o, FIOBJ_INVALID),
               "Array and FIOBJ_INVALID can't be equal!");

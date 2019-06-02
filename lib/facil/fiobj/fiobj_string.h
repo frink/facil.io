@@ -1,9 +1,9 @@
-#ifndef H_FIOBJ_STR_H
+#ifndef H_FIOBJ_STRING_H
 /*
 Copyright: Boaz Segev, 2017-2019
 License: MIT
 */
-#define H_FIOBJ_STR_H
+#define H_FIOBJ_STRING_H
 
 #include <fiobject.h>
 
@@ -18,7 +18,7 @@ API: Creating a String Object
 ***************************************************************************** */
 
 /** Creates a String object. Remember to use `fiobj_free`. */
-FIOBJ fiobj_str_new(const char *str, size_t len);
+FIOBJ fiobj_string_new(const char *str, size_t len);
 
 /**
  * Creates a String object with pre-allocation for Strings up to `capa` long.
@@ -27,12 +27,12 @@ FIOBJ fiobj_str_new(const char *str, size_t len);
  *
  * Remember to use `fiobj_free`.
  */
-FIOBJ fiobj_str_buf(size_t capa);
+FIOBJ fiobj_string_buffer(size_t capa);
 
 /** Creates a copy from an existing String. Remember to use `fiobj_free`. */
-static inline __attribute__((unused)) FIOBJ fiobj_str_copy(FIOBJ src) {
-  fio_str_info_s s = fiobj_obj2cstr(src);
-  return fiobj_str_new(s.data, s.len);
+static inline __attribute__((unused)) FIOBJ fiobj_string_copy(FIOBJ src) {
+  fio_string_info_s s = fiobj_obj2cstr(src);
+  return fiobj_string_new(s.data, s.len);
 }
 
 /**
@@ -48,13 +48,13 @@ static inline __attribute__((unused)) FIOBJ fiobj_str_copy(FIOBJ src) {
  * Note: The original memory MUST be allocated using `fio_malloc` (NOT the
  *       system's `malloc`) and it will be freed using `fio_free`.
  */
-FIOBJ fiobj_str_move(char *str, size_t len, size_t capacity);
+FIOBJ fiobj_string_move(char *str, size_t len, size_t capacity);
 
 /**
  * Returns a thread-static temporary string. Avoid calling `fiobj_dup` or
  * `fiobj_free`.
  */
-FIOBJ fiobj_str_tmp(void);
+FIOBJ fiobj_string_tmp(void);
 
 /* *****************************************************************************
 API: Editing a String
@@ -66,7 +66,7 @@ API: Editing a String
  * When a String is used as a key for a Hash, it is automatically frozen to
  * prevent the Hash from becoming broken.
  */
-void fiobj_str_freeze(FIOBJ str);
+void fiobj_string_freeze(FIOBJ str);
 
 /**
  * Confirms the String allows for the requested capacity (counting used space as
@@ -74,13 +74,13 @@ void fiobj_str_freeze(FIOBJ str);
  *
  * Returns updated capacity.
  */
-size_t fiobj_str_capa_assert(FIOBJ str, size_t size);
+size_t fiobj_string_capacity_assert(FIOBJ str, size_t size);
 
 /** Returns a String's capacity, if any. This should include the NUL byte. */
-size_t fiobj_str_capa(FIOBJ str);
+size_t fiobj_string_capacity(FIOBJ str);
 
 /** Resizes a String object, allocating more memory if required. */
-void fiobj_str_resize(FIOBJ str, size_t size);
+void fiobj_string_resize(FIOBJ str, size_t size);
 
 /**
  * Performs a best attempt at minimizing memory consumption.
@@ -88,33 +88,33 @@ void fiobj_str_resize(FIOBJ str, size_t size);
  * Actual effects depend on the underlying memory allocator and it's
  * implementation. Not all allocators will free any memory.
  */
-void fiobj_str_compact(FIOBJ str);
+void fiobj_string_compact(FIOBJ str);
 
-/** Alias for `fiobj_str_compact`. */
-#define fiobj_str_minimize(str) fiobj_str_compact((str))
+/** Alias for `fiobj_string_compact`. */
+#define fiobj_string_minimize(str) fiobj_string_compact((str))
 
 /** Empties a String's data. */
-void fiobj_str_clear(FIOBJ str);
+void fiobj_string_clear(FIOBJ str);
 
 /**
  * Writes data at the end of the string, resizing the string as required.
  * Returns the new length of the String
  */
-size_t fiobj_str_write(FIOBJ dest, const char *data, size_t len);
+size_t fiobj_string_write(FIOBJ dest, const char *data, size_t len);
 
 /**
  * Writes a number at the end of the String using normal base 10 notation.
  *
  * Returns the new length of the String
  */
-size_t fiobj_str_write_i(FIOBJ dest, int64_t num);
+size_t fiobj_string_write_i(FIOBJ dest, int64_t num);
 
 /**
  * Writes data at the end of the string using a printf like interface, resizing
  * the string as required. Returns the new length of the String
  */
 __attribute__((format(printf, 2, 3))) size_t
-fiobj_str_printf(FIOBJ dest, const char *format, ...);
+fiobj_string_printf(FIOBJ dest, const char *format, ...);
 
 /**
  * Writes data at the end of the string using a vprintf like interface, resizing
@@ -123,7 +123,7 @@ fiobj_str_printf(FIOBJ dest, const char *format, ...);
  * Returns the new length of the String
  */
 __attribute__((format(printf, 2, 0))) size_t
-fiobj_str_vprintf(FIOBJ dest, const char *format, va_list argv);
+fiobj_string_vprintf(FIOBJ dest, const char *format, va_list argv);
 
 /**
  * Writes data at the end of the string, resizing the string as required.
@@ -132,8 +132,8 @@ fiobj_str_vprintf(FIOBJ dest, const char *format, va_list argv);
  *
  * Returns the new length of the String.
  */
-size_t fiobj_str_concat(FIOBJ dest, FIOBJ source);
-#define fiobj_str_join(dest, src) fiobj_str_concat((dest), (src))
+size_t fiobj_string_concat(FIOBJ dest, FIOBJ source);
+#define fiobj_string_join(dest, src) fiobj_string_concat((dest), (src))
 
 /**
  * Dumps the `filename` file's contents at the end of the String.
@@ -149,7 +149,7 @@ size_t fiobj_str_concat(FIOBJ dest, FIOBJ source);
  *
  * NOTE: Requires a UNIX system, otherwise always returns FIOBJ_INVALID.
  */
-size_t fiobj_str_readfile(FIOBJ dest, const char *filename, intptr_t start_at,
+size_t fiobj_string_readfile(FIOBJ dest, const char *filename, intptr_t start_at,
                           intptr_t limit);
 
 /* *****************************************************************************
@@ -159,7 +159,7 @@ API: String Values
 /**
  * Calculates a String's SipHash value for possible use as a HashMap key.
  */
-uint64_t fiobj_str_hash(FIOBJ o);
+uint64_t fiobj_string_hash(FIOBJ o);
 
 #if DEBUG
 void fiobj_test_string(void);

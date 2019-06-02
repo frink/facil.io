@@ -5,11 +5,11 @@ license: MIT
 Feel free to copy, use and enjoy according to the license provided.
 */
 #include <fio.h>
-#define FIO_STR_NAME fio_str
+#define FIO_STRING_NAME fio_str
 #include <fio-stl.h>
 
 /* subscription lists have a long lifetime */
-#define FIO_FORCE_MALLOC_TMP 1
+#define FIO_FORCE_MALLOC_TEMP 1
 #define FIO_INCLUDE_LINKED_LIST
 #include <fio.h>
 
@@ -109,7 +109,7 @@ struct ws_s {
   /** connection data */
   intptr_t fd;
   /** callbacks */
-  void (*on_message)(ws_s *ws, fio_str_info_s msg, uint8_t is_text);
+  void (*on_message)(ws_s *ws, fio_string_info_s msg, uint8_t is_text);
   void (*on_shutdown)(ws_s *ws);
   void (*on_ready)(ws_s *ws);
   void (*on_open)(ws_s *ws);
@@ -154,17 +154,17 @@ static void websocket_on_unwrapped(void *ws_p, void *msg, uint64_t len,
                                    unsigned char rsv) {
   ws_s *ws = ws_p;
   if (last && first) {
-    ws->on_message(ws, (fio_str_info_s){.data = msg, .len = len},
+    ws->on_message(ws, (fio_string_info_s){.data = msg, .len = len},
                    (uint8_t)text);
     return;
   }
   if (first) {
     ws->is_text = (uint8_t)text;
     if (ws->msg == FIOBJ_INVALID)
-      ws->msg = fiobj_str_buf(len);
-    fiobj_str_resize(ws->msg, 0);
+      ws->msg = fiobj_string_buffer(len);
+    fiobj_string_resize(ws->msg, 0);
   }
-  fiobj_str_write(ws->msg, msg, len);
+  fiobj_string_write(ws->msg, msg, len);
   if (last) {
     ws->on_message(ws, fiobj_obj2cstr(ws->msg), ws->is_text);
   }
@@ -412,10 +412,10 @@ static void websocket_optimize_free(fio_msg_s *msg, void *metadata) {
   (void)msg;
 }
 
-static inline fio_msg_metadata_s websocket_optimize(fio_str_info_s msg,
+static inline fio_msg_metadata_s websocket_optimize(fio_string_info_s msg,
                                                     unsigned char opcode) {
-  FIOBJ out = fiobj_str_buf(msg.len + 10);
-  fiobj_str_resize(out,
+  FIOBJ out = fiobj_string_buffer(msg.len + 10);
+  fiobj_string_resize(out,
                    websocket_server_wrap(fiobj_obj2cstr(out).data, msg.data,
                                          msg.len, opcode, 1, 1, 0));
   fio_msg_metadata_s ret = {
@@ -424,14 +424,14 @@ static inline fio_msg_metadata_s websocket_optimize(fio_str_info_s msg,
   };
   return ret;
 }
-static fio_msg_metadata_s websocket_optimize_generic(fio_str_info_s ch,
-                                                     fio_str_info_s msg,
+static fio_msg_metadata_s websocket_optimize_generic(fio_string_info_s ch,
+                                                     fio_string_info_s msg,
                                                      uint8_t is_json) {
-  fio_str_s tmp =
-      (fio_str_s)FIO_STR_INIT_EXISTING(ch.data, ch.len, 0, NULL); // don't free
+  fio_string_s tmp =
+      (fio_string_s)FIO_STRING_INIT_EXISTING(ch.data, ch.len, 0, NULL); // don't free
   tmp.dealloc = NULL;
   unsigned char opcode = 2;
-  if (tmp.len <= (2 << 19) && fio_str_utf8_valid(&tmp)) {
+  if (tmp.len <= (2 << 19) && fio_string_utf8_valid(&tmp)) {
     opcode = 1;
   }
   fio_msg_metadata_s ret = websocket_optimize(msg, opcode);
@@ -441,8 +441,8 @@ static fio_msg_metadata_s websocket_optimize_generic(fio_str_info_s ch,
   (void)is_json;
 }
 
-static fio_msg_metadata_s websocket_optimize_text(fio_str_info_s ch,
-                                                  fio_str_info_s msg,
+static fio_msg_metadata_s websocket_optimize_text(fio_string_info_s ch,
+                                                  fio_string_info_s msg,
                                                   uint8_t is_json) {
   fio_msg_metadata_s ret = websocket_optimize(msg, 1);
   ret.type_id = WEBSOCKET_OPTIMIZE_PUBSUB_TEXT;
@@ -451,8 +451,8 @@ static fio_msg_metadata_s websocket_optimize_text(fio_str_info_s ch,
   (void)is_json;
 }
 
-static fio_msg_metadata_s websocket_optimize_binary(fio_str_info_s ch,
-                                                    fio_str_info_s msg,
+static fio_msg_metadata_s websocket_optimize_binary(fio_string_info_s ch,
+                                                    fio_string_info_s msg,
                                                     uint8_t is_json) {
   fio_msg_metadata_s ret = websocket_optimize(msg, 2);
   ret.type_id = WEBSOCKET_OPTIMIZE_PUBSUB_BINARY;
@@ -491,7 +491,7 @@ void websocket_optimize4broadcasts(intptr_t type, int enable) {
   static intptr_t generic = 0;
   static intptr_t text = 0;
   static intptr_t binary = 0;
-  fio_msg_metadata_s (*callback)(fio_str_info_s, fio_str_info_s, uint8_t);
+  fio_msg_metadata_s (*callback)(fio_string_info_s, fio_string_info_s, uint8_t);
   intptr_t *counter;
   switch ((0 - type)) {
   case (0 - WEBSOCKET_OPTIMIZE_PUBSUB):
@@ -525,7 +525,7 @@ Subscription handling
 ***************************************************************************** */
 
 typedef struct {
-  void (*on_message)(ws_s *ws, fio_str_info_s channel, fio_str_info_s msg,
+  void (*on_message)(ws_s *ws, fio_string_info_s channel, fio_string_info_s msg,
                      void *udata);
   void (*on_unsubscribe)(void *udata);
   void *udata;
@@ -563,15 +563,15 @@ static inline void websocket_on_pubsub_message_direct_internal(fio_msg_s *msg,
     if (pre_wrapped) {
       // FIO_LOG_DEBUG(
       //     "pub/sub WebSocket optimization route for pre-wrapped message.");
-      fiobj_send_free((intptr_t)msg->udata1, fiobj_dup(pre_wrapped));
+      fiobj_send_free((intptr_t)msg->udata1, fiobj_duplicate(pre_wrapped));
       goto finish;
     }
   }
   if (txt == 2) {
     /* unknown text state */
-    fio_str_s tmp =
-        FIO_STR_INIT_STATIC2(msg->msg.data, msg->msg.len); // don't free
-    txt = (tmp.len >= (2 << 14) ? 0 : fio_str_utf8_valid(&tmp));
+    fio_string_s tmp =
+        FIO_STRING_INIT_STATIC2(msg->msg.data, msg->msg.len); // don't free
+    txt = (tmp.len >= (2 << 14) ? 0 : fio_string_utf8_valid(&tmp));
   }
   websocket_write((ws_s *)pr, msg->msg, txt & 1);
   fiobj_free(message);
@@ -655,7 +655,7 @@ uintptr_t websocket_subscribe(struct websocket_subscribe_s args) {
     }
     websocket_optimize4broadcasts(br_type, 1);
     d->on_message =
-        (void (*)(ws_s *, fio_str_info_s, fio_str_info_s, void *))br_type;
+        (void (*)(ws_s *, fio_string_info_s, fio_string_info_s, void *))br_type;
   }
   subscription_s *sub =
       fio_subscribe(.channel = args.channel, .match = args.match,
@@ -716,7 +716,7 @@ void *websocket_udata_set(ws_s *ws, void *udata) {
 uint8_t websocket_is_client(ws_s *ws) { return ws->is_client; }
 
 /** Writes data to the websocket. Returns -1 on failure (0 on success). */
-int websocket_write(ws_s *ws, fio_str_info_s msg, uint8_t is_text) {
+int websocket_write(ws_s *ws, fio_string_info_s msg, uint8_t is_text) {
   if (fio_is_valid(ws->fd)) {
     websocket_write_impl(ws->fd, msg.data, msg.len, is_text, 1, 1,
                          ws->is_client);

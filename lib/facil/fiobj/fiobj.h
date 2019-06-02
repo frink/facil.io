@@ -6,13 +6,13 @@ License: MIT
 #define H_FIOBJ_H
 #define H___FHIOBJ_H
 
-#include <fiobj_ary.h>
+#include <fiobj_array.h>
 #include <fiobj_data.h>
 #include <fiobj_hash.h>
 #include <fiobj_json.h>
 #include <fiobj_mustache.h>
 #include <fiobj_numbers.h>
-#include <fiobj_str.h>
+#include <fiobj_string.h>
 #include <fiobject.h>
 
 #include <fio_siphash.h>

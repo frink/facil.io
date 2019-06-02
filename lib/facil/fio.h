@@ -107,7 +107,7 @@ Import STL
 #define FIO_NTOL 1
 #define FIO_RAND 1
 #define FIO_CLI 1
-#define FIO_STR_INFO 1
+#define FIO_STRING_INFO 1
 #include "fio-stl.h"
 
 /* *****************************************************************************
@@ -178,7 +178,7 @@ Compilation Macros
 #include <unistd.h>
 
 #ifndef FIO_FUNC
-#define FIO_FUNC static __attribute__((unused))
+#define FIO_FUNCTION static __attribute__((unused))
 #endif
 
 #if defined(__FreeBSD__)
@@ -195,7 +195,7 @@ Patch for OSX version < 10.12 from https://stackoverflow.com/a/9781275/4025095
 #define clock_gettime patch_clock_gettime
 // clock_gettime is not implemented on older versions of OS X (< 10.12).
 // If implemented, CLOCK_REALTIME will have already been defined.
-FIO_FUNC inline int patch_clock_gettime(int clk_id, struct timespec *t) {
+FIO_FUNCTION inline int patch_clock_gettime(int clk_id, struct timespec *t) {
   struct timeval now;
   int rv = gettimeofday(&now, NULL);
   if (rv)
@@ -332,7 +332,7 @@ int fio_set_non_block(int fd);
  * The value of 0 indicates either that the facil.io library wasn't initialized
  * yet or that it's resources were released.
  */
-size_t fio_capa(void);
+size_t fio_capacity(void);
 
 /** Sets a timeout for a specific connection (only when running and valid). */
 void fio_timeout_set(intptr_t uuid, uint8_t timeout);
@@ -559,14 +559,14 @@ URL address parsing
 
 /** the result returned by `fio_url_parse` */
 typedef struct {
-  fio_str_info_s scheme;
-  fio_str_info_s user;
-  fio_str_info_s password;
-  fio_str_info_s host;
-  fio_str_info_s port;
-  fio_str_info_s path;
-  fio_str_info_s query;
-  fio_str_info_s target;
+  fio_string_info_s scheme;
+  fio_string_info_s user;
+  fio_string_info_s password;
+  fio_string_info_s host;
+  fio_string_info_s port;
+  fio_string_info_s path;
+  fio_string_info_s query;
+  fio_string_info_s target;
 } fio_url_s;
 
 /**
@@ -794,7 +794,7 @@ void fio_force_close(intptr_t uuid);
  * The information is only available when the socket was accepted using
  * `fio_accept` or opened using `fio_connect`.
  */
-fio_str_info_s fio_peer_addr(intptr_t uuid);
+fio_string_info_s fio_peer_addr(intptr_t uuid);
 
 /**
  * Writes the local machine address (qualified host name) to the buffer.
@@ -914,7 +914,7 @@ void FIO_DEALLOC_NOOP(void *arg);
  * Returns the same values as `fio_write2`.
  */
 // ssize_t fio_write(uintptr_t uuid, void *buffer, size_t legnth);
-inline FIO_FUNC ssize_t fio_write(const intptr_t uuid, const void *buffer,
+inline FIO_FUNCTION ssize_t fio_write(const intptr_t uuid, const void *buffer,
                                   const size_t length) {
   if (!length || !buffer)
     return 0;
@@ -941,17 +941,17 @@ inline FIO_FUNC ssize_t fio_write(const intptr_t uuid, const void *buffer,
  *
  * Returns -1 and closes the file on error. Returns 0 on success.
  */
-inline FIO_FUNC ssize_t fio_sendfile(intptr_t uuid, intptr_t source_fd,
+inline FIO_FUNCTION ssize_t fio_sendfile(intptr_t uuid, intptr_t source_fd,
                                      off_t offset, size_t length) {
   return fio_write2(uuid, .data.fd = source_fd, .length = length, .is_fd = 1,
                     .offset = offset);
 }
 
 /** a helper macro for sending reference counted core strings. */
-#define FIO_STR_SEND_FREE2(str_name, uuid, s)                                  \
+#define FIO_STRING_SEND_FREE2(str_name, uuid, s)                                  \
   fio_write2(r->sub_data.uuid, .data.buffer = (char *)s,                       \
              .offset = ((char *)s - str_name##_data(s)),                       \
-             .length = str_name##_len(s),                                      \
+             .length = str_name##_length(s),                                      \
              .after.dealloc = (void (*)(void *))str_name##_free2);
 
 /**
@@ -1404,14 +1404,14 @@ typedef struct fio_msg_s {
    * NOTE: the channel and msg strings should be considered immutable. The .capa
    * field might be used for internal data.
    */
-  fio_str_info_s channel;
+  fio_string_info_s channel;
   /**
    * The actual message.
    *
    * NOTE: the channel and msg strings should be considered immutable. The .capa
    *field might be used for internal data.
    **/
-  fio_str_info_s msg;
+  fio_string_info_s msg;
   /** The `udata1` argument associated with the subscription. */
   void *udata1;
   /** The `udata1` argument associated with the subscription. */
@@ -1424,7 +1424,7 @@ typedef struct fio_msg_s {
  * Pattern matching callback type - should return 0 unless channel matches
  * pattern.
  */
-typedef int (*fio_match_fn)(fio_str_info_s pattern, fio_str_info_s channel);
+typedef int (*fio_match_fn)(fio_string_info_s pattern, fio_string_info_s channel);
 
 extern fio_match_fn FIO_MATCH_GLOB;
 
@@ -1454,7 +1454,7 @@ typedef struct {
    * This will match the subscription by channel (only messages with no `filter`
    * will be received.
    */
-  fio_str_info_s channel;
+  fio_string_info_s channel;
   /**
    * The the `match` function allows pattern matching for channel names.
    *
@@ -1486,9 +1486,9 @@ typedef struct fio_publish_args_s {
   /** A unique message type. Negative values are reserved, 0 == pub/sub. */
   int32_t filter;
   /** The pub/sub target channnel. */
-  fio_str_info_s channel;
+  fio_string_info_s channel;
   /** The pub/sub message. */
-  fio_str_info_s message;
+  fio_string_info_s message;
   /** flag indicating if the message is JSON data or binary/text. */
   uint8_t is_json;
 } fio_publish_args_s;
@@ -1522,7 +1522,7 @@ void fio_unsubscribe(subscription_s *subscription);
  *
  * To keep the string beyond the lifetime of the subscription, copy the string.
  */
-fio_str_info_s fio_subscription_channel(subscription_s *subscription);
+fio_string_info_s fio_subscription_channel(subscription_s *subscription);
 
 /**
  * Publishes a message to the relevant subscribers (if any).
@@ -1597,8 +1597,8 @@ struct fio_msg_metadata_s {
 /**
  * Pub/Sub Metadata callback type.
  */
-typedef fio_msg_metadata_s (*fio_msg_metadata_fn)(fio_str_info_s ch,
-                                                  fio_str_info_s msg,
+typedef fio_msg_metadata_s (*fio_msg_metadata_fn)(fio_string_info_s ch,
+                                                  fio_string_info_s msg,
                                                   uint8_t is_json);
 
 /**
@@ -1647,14 +1647,14 @@ void fio_message_metadata_callback_set(fio_msg_metadata_fn callback,
  */
 struct fio_pubsub_engine_s {
   /** Should subscribe channel. Failures are ignored. */
-  void (*subscribe)(const fio_pubsub_engine_s *eng, fio_str_info_s channel,
+  void (*subscribe)(const fio_pubsub_engine_s *eng, fio_string_info_s channel,
                     fio_match_fn match);
   /** Should unsubscribe channel. Failures are ignored. */
-  void (*unsubscribe)(const fio_pubsub_engine_s *eng, fio_str_info_s channel,
+  void (*unsubscribe)(const fio_pubsub_engine_s *eng, fio_string_info_s channel,
                       fio_match_fn match);
   /** Should publish a message through the engine. Failures are ignored. */
-  void (*publish)(const fio_pubsub_engine_s *eng, fio_str_info_s channel,
-                  fio_str_info_s msg, uint8_t is_json);
+  void (*publish)(const fio_pubsub_engine_s *eng, fio_string_info_s channel,
+                  fio_string_info_s msg, uint8_t is_json);
 };
 
 /**
@@ -1801,7 +1801,7 @@ char *fio_sha1_result(fio_sha1_s *s);
 /**
 An SHA1 helper function that performs initialiation, writing and finalizing.
 */
-inline FIO_FUNC char *fio_sha1(fio_sha1_s *s, const void *data, size_t len) {
+inline FIO_FUNCTION char *fio_sha1(fio_sha1_s *s, const void *data, size_t len) {
   *s = fio_sha1_init();
   fio_sha1_write(s, data, len);
   return fio_sha1_result(s);
@@ -1894,7 +1894,7 @@ char *fio_sha2_result(fio_sha2_s *s);
 An SHA2 helper function that performs initialiation, writing and finalizing.
 Uses the SHA2 512 variant.
 */
-inline FIO_FUNC char *fio_sha2_512(fio_sha2_s *s, const void *data,
+inline FIO_FUNCTION char *fio_sha2_512(fio_sha2_s *s, const void *data,
                                    size_t len) {
   *s = fio_sha2_init(SHA_512);
   fio_sha2_write(s, data, len);
@@ -1905,7 +1905,7 @@ inline FIO_FUNC char *fio_sha2_512(fio_sha2_s *s, const void *data,
 An SHA2 helper function that performs initialiation, writing and finalizing.
 Uses the SHA2 256 variant.
 */
-inline FIO_FUNC char *fio_sha2_256(fio_sha2_s *s, const void *data,
+inline FIO_FUNCTION char *fio_sha2_256(fio_sha2_s *s, const void *data,
                                    size_t len) {
   *s = fio_sha2_init(SHA_256);
   fio_sha2_write(s, data, len);
@@ -1916,7 +1916,7 @@ inline FIO_FUNC char *fio_sha2_256(fio_sha2_s *s, const void *data,
 An SHA2 helper function that performs initialiation, writing and finalizing.
 Uses the SHA2 384 variant.
 */
-inline FIO_FUNC char *fio_sha2_384(fio_sha2_s *s, const void *data,
+inline FIO_FUNCTION char *fio_sha2_384(fio_sha2_s *s, const void *data,
                                    size_t len) {
   *s = fio_sha2_init(SHA_384);
   fio_sha2_write(s, data, len);
@@ -2145,7 +2145,7 @@ C++ extern end
 
 #if DEBUG_SPINLOCK
 /** Busy waits for a lock, reports contention. */
-FIO_FUNC inline void fio_lock_dbg(fio_lock_i *lock, const char *file,
+FIO_FUNCTION inline void fio_lock_dbg(fio_lock_i *lock, const char *file,
                                   int line) {
   size_t lock_cycle_count = 0;
   while (fio_trylock(lock)) {
@@ -2162,7 +2162,7 @@ FIO_FUNC inline void fio_lock_dbg(fio_lock_i *lock, const char *file,
 }
 #define fio_lock(lock) fio_lock_dbg((lock), __FILE__, __LINE__)
 
-FIO_FUNC inline int fio_trylock_dbg(fio_lock_i *lock, const char *file,
+FIO_FUNCTION inline int fio_trylock_dbg(fio_lock_i *lock, const char *file,
                                     int line) {
   static int last_line = 0;
   static size_t count = 0;
@@ -2207,7 +2207,7 @@ FIO_FUNC inline int fio_trylock_dbg(fio_lock_i *lock, const char *file,
 #undef FIO__REALLOC
 #undef FIO__FREE
 
-#if FIO_FORCE_MALLOC || FIO_FORCE_MALLOC_TMP
+#if FIO_FORCE_MALLOC || FIO_FORCE_MALLOC_TEMP
 #define FIO__MALLOC(size) calloc((size), 1)
 #define FIO__CALLOC(size, units) calloc((size), (units))
 #define FIO__REALLOC(ptr, new_length, existing_data_length)                    \
@@ -2220,7 +2220,7 @@ FIO_FUNC inline int fio_trylock_dbg(fio_lock_i *lock, const char *file,
 #define FIO__REALLOC(ptr, new_length, existing_data_length)                    \
   fio_realloc2((ptr), (new_length), (existing_data_length))
 #define FIO__FREE fio_free
-#endif /* FIO_FORCE_MALLOC || FIO_FORCE_MALLOC_TMP */
+#endif /* FIO_FORCE_MALLOC || FIO_FORCE_MALLOC_TEMP */
 
 /* *****************************************************************************
 
@@ -2269,26 +2269,26 @@ Embedded Linked List API
 ***************************************************************************** */
 
 /** Adds a node to the list's head. */
-FIO_FUNC inline void fio_ls_embd_push(fio_ls_embd_s *dest, fio_ls_embd_s *node);
+FIO_FUNCTION inline void fio_ls_embd_push(fio_ls_embd_s *dest, fio_ls_embd_s *node);
 
 /** Adds a node to the list's tail. */
-FIO_FUNC inline void fio_ls_embd_unshift(fio_ls_embd_s *dest,
+FIO_FUNCTION inline void fio_ls_embd_unshift(fio_ls_embd_s *dest,
                                          fio_ls_embd_s *node);
 
 /** Removes a node from the list's head. */
-FIO_FUNC inline fio_ls_embd_s *fio_ls_embd_pop(fio_ls_embd_s *list);
+FIO_FUNCTION inline fio_ls_embd_s *fio_ls_embd_pop(fio_ls_embd_s *list);
 
 /** Removes a node from the list's tail. */
-FIO_FUNC inline fio_ls_embd_s *fio_ls_embd_shift(fio_ls_embd_s *list);
+FIO_FUNCTION inline fio_ls_embd_s *fio_ls_embd_shift(fio_ls_embd_s *list);
 
 /** Removes a node from the containing node. */
-FIO_FUNC inline fio_ls_embd_s *fio_ls_embd_remove(fio_ls_embd_s *node);
+FIO_FUNCTION inline fio_ls_embd_s *fio_ls_embd_remove(fio_ls_embd_s *node);
 
 /** Tests if the list is empty. */
-FIO_FUNC inline int fio_ls_embd_is_empty(fio_ls_embd_s *list);
+FIO_FUNCTION inline int fio_ls_embd_is_empty(fio_ls_embd_s *list);
 
 /** Tests if the list is NOT empty (contains any nodes). */
-FIO_FUNC inline int fio_ls_embd_any(fio_ls_embd_s *list);
+FIO_FUNCTION inline int fio_ls_embd_any(fio_ls_embd_s *list);
 
 /**
  * Iterates through the list using a `for` loop.
@@ -2314,25 +2314,25 @@ Independent Linked List API
 ***************************************************************************** */
 
 /** Adds an object to the list's head, returnin's the object's location. */
-FIO_FUNC inline fio_ls_s *fio_ls_push(fio_ls_s *pos, const void *obj);
+FIO_FUNCTION inline fio_ls_s *fio_ls_push(fio_ls_s *pos, const void *obj);
 
 /** Adds an object to the list's tail, returnin's the object's location. */
-FIO_FUNC inline fio_ls_s *fio_ls_unshift(fio_ls_s *pos, const void *obj);
+FIO_FUNCTION inline fio_ls_s *fio_ls_unshift(fio_ls_s *pos, const void *obj);
 
 /** Removes an object from the list's head. */
-FIO_FUNC inline void *fio_ls_pop(fio_ls_s *list);
+FIO_FUNCTION inline void *fio_ls_pop(fio_ls_s *list);
 
 /** Removes an object from the list's tail. */
-FIO_FUNC inline void *fio_ls_shift(fio_ls_s *list);
+FIO_FUNCTION inline void *fio_ls_shift(fio_ls_s *list);
 
 /** Removes a node from the list, returning the contained object. */
-FIO_FUNC inline void *fio_ls_remove(fio_ls_s *node);
+FIO_FUNCTION inline void *fio_ls_remove(fio_ls_s *node);
 
 /** Tests if the list is empty. */
-FIO_FUNC inline int fio_ls_is_empty(fio_ls_s *list);
+FIO_FUNCTION inline int fio_ls_is_empty(fio_ls_s *list);
 
 /** Tests if the list is NOT empty (contains any nodes). */
-FIO_FUNC inline int fio_ls_any(fio_ls_s *list);
+FIO_FUNCTION inline int fio_ls_any(fio_ls_s *list);
 
 /**
  * Iterates through the list using a `for` loop.
@@ -2356,7 +2356,7 @@ Embeded Linked List Implementation
 ***************************************************************************** */
 
 /** Removes a node from the containing node. */
-FIO_FUNC inline fio_ls_embd_s *fio_ls_embd_remove(fio_ls_embd_s *node) {
+FIO_FUNCTION inline fio_ls_embd_s *fio_ls_embd_remove(fio_ls_embd_s *node) {
   if (!node->next || node->next == node) {
     /* never remove the list's head */
     return NULL;
@@ -2368,7 +2368,7 @@ FIO_FUNC inline fio_ls_embd_s *fio_ls_embd_remove(fio_ls_embd_s *node) {
 }
 
 /** Adds a node to the list's head. */
-FIO_FUNC inline void fio_ls_embd_push(fio_ls_embd_s *dest,
+FIO_FUNCTION inline void fio_ls_embd_push(fio_ls_embd_s *dest,
                                       fio_ls_embd_s *node) {
   if (!dest || !node)
     return;
@@ -2379,28 +2379,28 @@ FIO_FUNC inline void fio_ls_embd_push(fio_ls_embd_s *dest,
 }
 
 /** Adds a node to the list's tail. */
-FIO_FUNC inline void fio_ls_embd_unshift(fio_ls_embd_s *dest,
+FIO_FUNCTION inline void fio_ls_embd_unshift(fio_ls_embd_s *dest,
                                          fio_ls_embd_s *node) {
   fio_ls_embd_push(dest->next, node);
 }
 
 /** Removes a node from the list's head. */
-FIO_FUNC inline fio_ls_embd_s *fio_ls_embd_pop(fio_ls_embd_s *list) {
+FIO_FUNCTION inline fio_ls_embd_s *fio_ls_embd_pop(fio_ls_embd_s *list) {
   return fio_ls_embd_remove(list->prev);
 }
 
 /** Removes a node from the list's tail. */
-FIO_FUNC inline fio_ls_embd_s *fio_ls_embd_shift(fio_ls_embd_s *list) {
+FIO_FUNCTION inline fio_ls_embd_s *fio_ls_embd_shift(fio_ls_embd_s *list) {
   return fio_ls_embd_remove(list->next);
 }
 
 /** Tests if the list is empty. */
-FIO_FUNC inline int fio_ls_embd_is_empty(fio_ls_embd_s *list) {
+FIO_FUNCTION inline int fio_ls_embd_is_empty(fio_ls_embd_s *list) {
   return list->next == list;
 }
 
 /** Tests if the list is NOT empty (contains any nodes). */
-FIO_FUNC inline int fio_ls_embd_any(fio_ls_embd_s *list) {
+FIO_FUNCTION inline int fio_ls_embd_any(fio_ls_embd_s *list) {
   return list->next != list;
 }
 
@@ -2413,7 +2413,7 @@ Independent Linked List Implementation
 ***************************************************************************** */
 
 /** Removes an object from the containing node. */
-FIO_FUNC inline void *fio_ls_remove(fio_ls_s *node) {
+FIO_FUNCTION inline void *fio_ls_remove(fio_ls_s *node) {
   if (!node || node->next == node) {
     /* never remove the list's head */
     return NULL;
@@ -2426,7 +2426,7 @@ FIO_FUNC inline void *fio_ls_remove(fio_ls_s *node) {
 }
 
 /** Adds an object to the list's head. */
-FIO_FUNC inline fio_ls_s *fio_ls_push(fio_ls_s *pos, const void *obj) {
+FIO_FUNCTION inline fio_ls_s *fio_ls_push(fio_ls_s *pos, const void *obj) {
   if (!pos)
     return NULL;
   /* prepare item */
@@ -2440,27 +2440,27 @@ FIO_FUNC inline fio_ls_s *fio_ls_push(fio_ls_s *pos, const void *obj) {
 }
 
 /** Adds an object to the list's tail. */
-FIO_FUNC inline fio_ls_s *fio_ls_unshift(fio_ls_s *pos, const void *obj) {
+FIO_FUNCTION inline fio_ls_s *fio_ls_unshift(fio_ls_s *pos, const void *obj) {
   return fio_ls_push(pos->next, obj);
 }
 
 /** Removes an object from the list's head. */
-FIO_FUNC inline void *fio_ls_pop(fio_ls_s *list) {
+FIO_FUNCTION inline void *fio_ls_pop(fio_ls_s *list) {
   return fio_ls_remove(list->prev);
 }
 
 /** Removes an object from the list's tail. */
-FIO_FUNC inline void *fio_ls_shift(fio_ls_s *list) {
+FIO_FUNCTION inline void *fio_ls_shift(fio_ls_s *list) {
   return fio_ls_remove(list->next);
 }
 
 /** Tests if the list is empty. */
-FIO_FUNC inline int fio_ls_is_empty(fio_ls_s *list) {
+FIO_FUNCTION inline int fio_ls_is_empty(fio_ls_s *list) {
   return list->next == list;
 }
 
 /** Tests if the list is NOT empty (contains any nodes). */
-FIO_FUNC inline int fio_ls_any(fio_ls_s *list) { return list->next != list; }
+FIO_FUNCTION inline int fio_ls_any(fio_ls_s *list) { return list->next != list; }
 
 #undef FIO_LS_FOR
 #define FIO_LS_FOR(list, pos)                                                  \
@@ -2532,25 +2532,25 @@ FIO_FUNC inline int fio_ls_any(fio_ls_s *list) { return list->next != list; }
  *
  *
  *         #define FIO_INCLUDE_STR
- *         #include <fio.h> // adds the fio_str_s types and functions
+ *         #include <fio.h> // adds the fio_string_s types and functions
  *
- *         #define FIO_SET_NAME fio_str_set
- *         #define FIO_SET_OBJ_TYPE fio_str_s *
- *         #define FIO_SET_OBJ_COMPARE(k1, k2) (fio_str_iseq((k1), (k2)))
- *         #define FIO_SET_OBJ_COPY(key) fio_str_dup((key))
- *         #define FIO_SET_OBJ_DESTROY(key) fio_str_free2((key))
- *         #include <fio.h> // creates the fio_str_set_s Set and functions
+ *         #define FIO_SET_NAME fio_string_set
+ *         #define FIO_SET_OBJ_TYPE fio_string_s *
+ *         #define FIO_SET_OBJ_COMPARE(k1, k2) (fio_string_iseq((k1), (k2)))
+ *         #define FIO_SET_OBJ_COPY(key) fio_string_duplicate((key))
+ *         #define FIO_SET_OBJ_DESTROY(key) fio_string_free2((key))
+ *         #include <fio.h> // creates the fio_string_set_s Set and functions
  *
- *         #define FIO_SET_NAME fio_str_hash
- *         #define FIO_SET_KEY_TYPE fio_str_s *
- *         #define FIO_SET_KEY_COMPARE(k1, k2) (fio_str_iseq((k1), (k2)))
- *         #define FIO_SET_KEY_COPY(key) fio_str_dup((key))
- *         #define FIO_SET_KEY_DESTROY(key) fio_str_free2((key))
- *         #define FIO_SET_OBJ_TYPE fio_str_s *
- *         #define FIO_SET_OBJ_COMPARE(k1, k2) (fio_str_iseq((k1), (k2)))
- *         #define FIO_SET_OBJ_COPY(key) fio_str_dup((key))
- *         #define FIO_SET_OBJ_DESTROY(key) fio_str_free2((key))
- *         #include <fio.h> // creates the fio_str_hash_s Hash Map and functions
+ *         #define FIO_SET_NAME fio_string_hash
+ *         #define FIO_SET_KEY_TYPE fio_string_s *
+ *         #define FIO_SET_KEY_COMPARE(k1, k2) (fio_string_iseq((k1), (k2)))
+ *         #define FIO_SET_KEY_COPY(key) fio_string_duplicate((key))
+ *         #define FIO_SET_KEY_DESTROY(key) fio_string_free2((key))
+ *         #define FIO_SET_OBJ_TYPE fio_string_s *
+ *         #define FIO_SET_OBJ_COMPARE(k1, k2) (fio_string_iseq((k1), (k2)))
+ *         #define FIO_SET_OBJ_COPY(key) fio_string_duplicate((key))
+ *         #define FIO_SET_OBJ_DESTROY(key) fio_string_free2((key))
+ *         #include <fio.h> // creates the fio_string_hash_s Hash Map and functions
  *
  * The default integer Hash used is a pointer length type (uintptr_t). This can
  * be changed by defining ALL of the following macros:
@@ -2719,7 +2719,7 @@ typedef struct FIO_NAME(s) FIO_NAME(s);
 #endif
 
 /** Frees all the objects in the set and deallocates any internal resources. */
-FIO_FUNC void FIO_NAME_FREE()(FIO_NAME(s) * set);
+FIO_FUNCTION void FIO_NAME_FREE()(FIO_NAME(s) * set);
 
 #ifdef FIO_SET_KEY_TYPE
 
@@ -2728,7 +2728,7 @@ FIO_FUNC void FIO_NAME_FREE()(FIO_NAME(s) * set);
  *
  * NOTE: This is the function's Hash Map variant. See FIO_SET_KEY_TYPE.
  */
-FIO_FUNC inline FIO_SET_OBJ_TYPE
+FIO_FUNCTION inline FIO_SET_OBJ_TYPE
     FIO_NAME(find)(FIO_NAME(s) * set, const FIO_SET_HASH_TYPE hash_value,
                    FIO_SET_KEY_TYPE key);
 
@@ -2743,7 +2743,7 @@ FIO_FUNC inline FIO_SET_OBJ_TYPE
  *
  * NOTE: This is the function's Hash Map variant. See FIO_SET_KEY_TYPE.
  */
-FIO_FUNC inline void FIO_NAME(insert)(FIO_NAME(s) * set,
+FIO_FUNCTION inline void FIO_NAME(insert)(FIO_NAME(s) * set,
                                       const FIO_SET_HASH_TYPE hash_value,
                                       FIO_SET_KEY_TYPE key,
                                       FIO_SET_OBJ_TYPE obj,
@@ -2759,7 +2759,7 @@ FIO_FUNC inline void FIO_NAME(insert)(FIO_NAME(s) * set,
  *
  * NOTE: This is the function's Hash Map variant. See FIO_SET_KEY_TYPE.
  */
-FIO_FUNC inline int FIO_NAME(remove)(FIO_NAME(s) * set,
+FIO_FUNCTION inline int FIO_NAME(remove)(FIO_NAME(s) * set,
                                      const FIO_SET_HASH_TYPE hash_value,
                                      FIO_SET_KEY_TYPE key,
                                      FIO_SET_OBJ_TYPE *old);
@@ -2771,7 +2771,7 @@ FIO_FUNC inline int FIO_NAME(remove)(FIO_NAME(s) * set,
  *
  * NOTE: This is the function's pure Set variant (no FIO_SET_KEY_TYPE).
  */
-FIO_FUNC inline FIO_SET_OBJ_TYPE
+FIO_FUNCTION inline FIO_SET_OBJ_TYPE
     FIO_NAME(find)(FIO_NAME(s) * set, const FIO_SET_HASH_TYPE hash_value,
                    FIO_SET_OBJ_TYPE obj);
 
@@ -2784,7 +2784,7 @@ FIO_FUNC inline FIO_SET_OBJ_TYPE
  *
  * NOTE: This is the function's pure Set variant (no FIO_SET_KEY_TYPE).
  */
-FIO_FUNC inline FIO_SET_OBJ_TYPE
+FIO_FUNCTION inline FIO_SET_OBJ_TYPE
     FIO_NAME(insert)(FIO_NAME(s) * set, const FIO_SET_HASH_TYPE hash_value,
                      FIO_SET_OBJ_TYPE obj);
 
@@ -2797,7 +2797,7 @@ FIO_FUNC inline FIO_SET_OBJ_TYPE
  *
  * When setting `old` to NULL, the function behaves the same as `overwrite`.
  */
-FIO_FUNC FIO_SET_OBJ_TYPE
+FIO_FUNCTION FIO_SET_OBJ_TYPE
     FIO_NAME(overwrite)(FIO_NAME(s) * set, const FIO_SET_HASH_TYPE hash_value,
                         FIO_SET_OBJ_TYPE obj, FIO_SET_OBJ_TYPE *old);
 
@@ -2808,7 +2808,7 @@ FIO_FUNC FIO_SET_OBJ_TYPE
  *
  * NOTE: This is the function's pure Set variant (no FIO_SET_KEY_TYPE).
  */
-FIO_FUNC inline int FIO_NAME(remove)(FIO_NAME(s) * set,
+FIO_FUNCTION inline int FIO_NAME(remove)(FIO_NAME(s) * set,
                                      const FIO_SET_HASH_TYPE hash_value,
                                      FIO_SET_OBJ_TYPE obj,
                                      FIO_SET_OBJ_TYPE *old);
@@ -2820,35 +2820,35 @@ FIO_FUNC inline int FIO_NAME(remove)(FIO_NAME(s) * set,
  * Remember that objects might be destroyed if the Set is altered
  * (`FIO_SET_OBJ_DESTROY` / `FIO_SET_KEY_DESTROY`).
  */
-FIO_FUNC inline FIO_SET_TYPE FIO_NAME(last)(FIO_NAME(s) * set);
+FIO_FUNCTION inline FIO_SET_TYPE FIO_NAME(last)(FIO_NAME(s) * set);
 
 /**
  * Allows the Hash to be momentarily used as a stack, destroying the last
  * object added (`FIO_SET_OBJ_DESTROY` / `FIO_SET_KEY_DESTROY`).
  */
-FIO_FUNC inline void FIO_NAME(pop)(FIO_NAME(s) * set);
+FIO_FUNCTION inline void FIO_NAME(pop)(FIO_NAME(s) * set);
 
 /** Returns the number of object currently in the Set. */
-FIO_FUNC inline size_t FIO_NAME(count)(const FIO_NAME(s) * set);
+FIO_FUNCTION inline size_t FIO_NAME(count)(const FIO_NAME(s) * set);
 
 /**
  * Returns a temporary theoretical Set capacity.
  * This could be used for testing performance and memory consumption.
  */
-FIO_FUNC inline size_t FIO_NAME(capa)(const FIO_NAME(s) * set);
+FIO_FUNCTION inline size_t FIO_NAME(capa)(const FIO_NAME(s) * set);
 
 /**
  * Requires that a Set contains the minimal requested theoretical capacity.
  *
  * Returns the actual (temporary) theoretical capacity.
  */
-FIO_FUNC inline size_t FIO_NAME(capa_require)(FIO_NAME(s) * set,
+FIO_FUNCTION inline size_t FIO_NAME(capa_require)(FIO_NAME(s) * set,
                                               size_t min_capa);
 
 /**
  * Returns non-zero if the Set is fragmented (more than 50% holes).
  */
-FIO_FUNC inline size_t FIO_NAME(is_fragmented)(const FIO_NAME(s) * set);
+FIO_FUNCTION inline size_t FIO_NAME(is_fragmented)(const FIO_NAME(s) * set);
 
 /**
  * Attempts to minimize memory usage by removing empty spaces caused by deleted
@@ -2856,10 +2856,10 @@ FIO_FUNC inline size_t FIO_NAME(is_fragmented)(const FIO_NAME(s) * set);
  *
  * Returns the updated Set capacity.
  */
-FIO_FUNC inline size_t FIO_NAME(compact)(FIO_NAME(s) * set);
+FIO_FUNCTION inline size_t FIO_NAME(compact)(FIO_NAME(s) * set);
 
 /** Forces a rehashing of the Set. */
-FIO_FUNC void FIO_NAME(rehash)(FIO_NAME(s) * set);
+FIO_FUNCTION void FIO_NAME(rehash)(FIO_NAME(s) * set);
 
 #ifndef FIO_SET_FOR_LOOP
 /**
@@ -2914,7 +2914,7 @@ Set / Hash Map Internal Helpers
 ***************************************************************************** */
 
 /** Locates an object's map position in the Set, if it exists. */
-FIO_FUNC inline FIO_NAME(_map_s_) *
+FIO_FUNCTION inline FIO_NAME(_map_s_) *
     FIO_NAME(_find_map_pos_)(FIO_NAME(s) * set, FIO_SET_HASH_TYPE hash_value,
                              FIO_SET_TYPE obj) {
   if (FIO_SET_HASH_COMPARE(hash_value, FIO_SET_HASH_INVALID))
@@ -2983,7 +2983,7 @@ FIO_FUNC inline FIO_NAME(_map_s_) *
 
 /** Removes "holes" from the Set's internal Array - MUST re-hash afterwards.
  */
-FIO_FUNC inline void FIO_NAME(_compact_ordered_array_)(FIO_NAME(s) * set) {
+FIO_FUNCTION inline void FIO_NAME(_compact_ordered_array_)(FIO_NAME(s) * set) {
   if (set->count == set->pos)
     return;
   FIO_NAME(_ordered_s_) *reader = set->ordered;
@@ -3001,7 +3001,7 @@ FIO_FUNC inline void FIO_NAME(_compact_ordered_array_)(FIO_NAME(s) * set) {
 }
 
 /** (Re)allocates the set's internal, invalidatint the mapping (must rehash) */
-FIO_FUNC inline void FIO_NAME(_reallocate_set_mem_)(FIO_NAME(s) * set) {
+FIO_FUNCTION inline void FIO_NAME(_reallocate_set_mem_)(FIO_NAME(s) * set) {
   const uintptr_t new_capa = 1ULL << set->used_bits;
   FIO_SET_FREE(set->map, set->capa * sizeof(*set->map));
   set->map = (FIO_NAME(_map_s_) *)FIO_SET_CALLOC(sizeof(*set->map), new_capa);
@@ -3022,7 +3022,7 @@ FIO_FUNC inline void FIO_NAME(_reallocate_set_mem_)(FIO_NAME(s) * set) {
  * If the object already exists in the set, it will be destroyed and
  * overwritten.
  */
-FIO_FUNC inline FIO_SET_TYPE
+FIO_FUNCTION inline FIO_SET_TYPE
 FIO_NAME(_insert_or_overwrite_)(FIO_NAME(s) * set, FIO_SET_HASH_TYPE hash_value,
                                 FIO_SET_TYPE obj, int overwrite,
                                 FIO_SET_OBJ_TYPE *old) {
@@ -3091,7 +3091,7 @@ Set / Hash Map Implementation
 ***************************************************************************** */
 
 /** Frees all the objects in the set and deallocates any internal resources. */
-FIO_FUNC void FIO_NAME_FREE()(FIO_NAME(s) * s) {
+FIO_FUNCTION void FIO_NAME_FREE()(FIO_NAME(s) * s) {
   /* destroy existing valid objects */
   const FIO_NAME(_ordered_s_) *const end = s->ordered + s->pos;
   if (s->ordered && s->ordered != end) {
@@ -3116,7 +3116,7 @@ FIO_FUNC void FIO_NAME_FREE()(FIO_NAME(s) * s) {
  *
  * NOTE: This is the function's Hash Map variant. See FIO_SET_KEY_TYPE.
  */
-FIO_FUNC FIO_SET_OBJ_TYPE FIO_NAME(find)(FIO_NAME(s) * set,
+FIO_FUNCTION FIO_SET_OBJ_TYPE FIO_NAME(find)(FIO_NAME(s) * set,
                                          const FIO_SET_HASH_TYPE hash_value,
                                          FIO_SET_KEY_TYPE key) {
   FIO_NAME(_map_s_) *pos =
@@ -3140,7 +3140,7 @@ FIO_FUNC FIO_SET_OBJ_TYPE FIO_NAME(find)(FIO_NAME(s) * set,
  *
  * NOTE: This is the function's Hash Map variant. See FIO_SET_KEY_TYPE.
  */
-FIO_FUNC void FIO_NAME(insert)(FIO_NAME(s) * set,
+FIO_FUNCTION void FIO_NAME(insert)(FIO_NAME(s) * set,
                                const FIO_SET_HASH_TYPE hash_value,
                                FIO_SET_KEY_TYPE key, FIO_SET_OBJ_TYPE obj,
                                FIO_SET_OBJ_TYPE *old) {
@@ -3158,7 +3158,7 @@ FIO_FUNC void FIO_NAME(insert)(FIO_NAME(s) * set,
  *
  * NOTE: This is the function's Hash Map variant. See FIO_SET_KEY_TYPE.
  */
-FIO_FUNC inline int FIO_NAME(remove)(FIO_NAME(s) * set,
+FIO_FUNCTION inline int FIO_NAME(remove)(FIO_NAME(s) * set,
                                      const FIO_SET_HASH_TYPE hash_value,
                                      FIO_SET_KEY_TYPE key,
                                      FIO_SET_OBJ_TYPE *old) {
@@ -3188,7 +3188,7 @@ FIO_FUNC inline int FIO_NAME(remove)(FIO_NAME(s) * set,
 /* Set unique implementation */
 
 /** Locates an object in the Set, if it exists. */
-FIO_FUNC FIO_SET_OBJ_TYPE FIO_NAME(find)(FIO_NAME(s) * set,
+FIO_FUNCTION FIO_SET_OBJ_TYPE FIO_NAME(find)(FIO_NAME(s) * set,
                                          const FIO_SET_HASH_TYPE hash_value,
                                          FIO_SET_OBJ_TYPE obj) {
   FIO_NAME(_map_s_) *pos = FIO_NAME(_find_map_pos_)(set, hash_value, obj);
@@ -3207,7 +3207,7 @@ FIO_FUNC FIO_SET_OBJ_TYPE FIO_NAME(find)(FIO_NAME(s) * set,
  * If the object already exists in the set, than the new object will be
  * destroyed and the old object's address will be returned.
  */
-FIO_FUNC FIO_SET_OBJ_TYPE FIO_NAME(insert)(FIO_NAME(s) * set,
+FIO_FUNCTION FIO_SET_OBJ_TYPE FIO_NAME(insert)(FIO_NAME(s) * set,
                                            const FIO_SET_HASH_TYPE hash_value,
                                            FIO_SET_OBJ_TYPE obj) {
   return FIO_NAME(_insert_or_overwrite_)(set, hash_value, obj, 0, NULL);
@@ -3222,7 +3222,7 @@ FIO_FUNC FIO_SET_OBJ_TYPE FIO_NAME(insert)(FIO_NAME(s) * set,
  *
  * When setting `old` to NULL, the function behaves the same as `overwrite`.
  */
-FIO_FUNC FIO_SET_OBJ_TYPE
+FIO_FUNCTION FIO_SET_OBJ_TYPE
 FIO_NAME(overwrite)(FIO_NAME(s) * set, const FIO_SET_HASH_TYPE hash_value,
                     FIO_SET_OBJ_TYPE obj, FIO_SET_OBJ_TYPE *old) {
   return FIO_NAME(_insert_or_overwrite_)(set, hash_value, obj, 1, old);
@@ -3231,7 +3231,7 @@ FIO_NAME(overwrite)(FIO_NAME(s) * set, const FIO_SET_HASH_TYPE hash_value,
 /**
  * Removes an object from the Set, rehashing if required.
  */
-FIO_FUNC int FIO_NAME(remove)(FIO_NAME(s) * set,
+FIO_FUNCTION int FIO_NAME(remove)(FIO_NAME(s) * set,
                               const FIO_SET_HASH_TYPE hash_value,
                               FIO_SET_OBJ_TYPE obj, FIO_SET_OBJ_TYPE *old) {
   if (FIO_SET_HASH_COMPARE(hash_value, FIO_SET_HASH_INVALID))
@@ -3264,7 +3264,7 @@ FIO_FUNC int FIO_NAME(remove)(FIO_NAME(s) * set,
  * Remember that objects might be destroyed if the Set is altered
  * (`FIO_SET_OBJ_DESTROY` / `FIO_SET_KEY_DESTROY`).
  */
-FIO_FUNC inline FIO_SET_TYPE FIO_NAME(last)(FIO_NAME(s) * set) {
+FIO_FUNCTION inline FIO_SET_TYPE FIO_NAME(last)(FIO_NAME(s) * set) {
   if (!set->ordered || !set->pos) {
     FIO_SET_TYPE empty;
     memset(&empty, 0, sizeof(empty));
@@ -3277,7 +3277,7 @@ FIO_FUNC inline FIO_SET_TYPE FIO_NAME(last)(FIO_NAME(s) * set) {
  * Allows the Hash to be momentarily used as a stack, destroying the last
  * object added (`FIO_SET_OBJ_DESTROY` / `FIO_SET_KEY_DESTROY`).
  */
-FIO_FUNC void FIO_NAME(pop)(FIO_NAME(s) * set) {
+FIO_FUNCTION void FIO_NAME(pop)(FIO_NAME(s) * set) {
   if (!set->ordered || !set->pos)
     return;
   FIO_SET_DESTROY(set->ordered[set->pos - 1].obj);
@@ -3290,7 +3290,7 @@ FIO_FUNC void FIO_NAME(pop)(FIO_NAME(s) * set) {
 }
 
 /** Returns the number of objects currently in the Set. */
-FIO_FUNC inline size_t FIO_NAME(count)(const FIO_NAME(s) * set) {
+FIO_FUNCTION inline size_t FIO_NAME(count)(const FIO_NAME(s) * set) {
   return (size_t)set->count;
 }
 
@@ -3298,7 +3298,7 @@ FIO_FUNC inline size_t FIO_NAME(count)(const FIO_NAME(s) * set) {
  * Returns a temporary theoretical Set capacity.
  * This could be used for testing performance and memory consumption.
  */
-FIO_FUNC inline size_t FIO_NAME(capa)(const FIO_NAME(s) * set) {
+FIO_FUNCTION inline size_t FIO_NAME(capa)(const FIO_NAME(s) * set) {
   return (size_t)set->capa;
 }
 
@@ -3307,7 +3307,7 @@ FIO_FUNC inline size_t FIO_NAME(capa)(const FIO_NAME(s) * set) {
  *
  * Returns the actual (temporary) theoretical capacity.
  */
-FIO_FUNC inline size_t FIO_NAME(capa_require)(FIO_NAME(s) * set,
+FIO_FUNCTION inline size_t FIO_NAME(capa_require)(FIO_NAME(s) * set,
                                               size_t min_capa) {
   if (min_capa <= FIO_NAME(capa)(set))
     return FIO_NAME(capa)(set);
@@ -3322,7 +3322,7 @@ FIO_FUNC inline size_t FIO_NAME(capa_require)(FIO_NAME(s) * set,
 /**
  * Returns non-zero if the Set is fragmented (more than 50% holes).
  */
-FIO_FUNC inline size_t FIO_NAME(is_fragmented)(const FIO_NAME(s) * set) {
+FIO_FUNCTION inline size_t FIO_NAME(is_fragmented)(const FIO_NAME(s) * set) {
   return ((set->pos - set->count) > (set->count >> 1));
 }
 
@@ -3332,7 +3332,7 @@ FIO_FUNC inline size_t FIO_NAME(is_fragmented)(const FIO_NAME(s) * set) {
  *
  * Returns the updated Set capacity.
  */
-FIO_FUNC inline size_t FIO_NAME(compact)(FIO_NAME(s) * set) {
+FIO_FUNCTION inline size_t FIO_NAME(compact)(FIO_NAME(s) * set) {
   FIO_NAME(_compact_ordered_array_)(set);
   set->used_bits = 2;
   while (set->count >= (1ULL << set->used_bits)) {
@@ -3343,7 +3343,7 @@ FIO_FUNC inline size_t FIO_NAME(compact)(FIO_NAME(s) * set) {
 }
 
 /** Forces a rehashing of the Set. */
-FIO_FUNC void FIO_NAME(rehash)(FIO_NAME(s) * set) {
+FIO_FUNCTION void FIO_NAME(rehash)(FIO_NAME(s) * set) {
   FIO_NAME(_compact_ordered_array_)(set);
   set->has_collisions = 0;
   uint8_t attempts = 0;
@@ -3402,6 +3402,6 @@ restart:
 #undef FIO_NAME_FROM_MACRO_STEP3
 #undef FIO_NAME_FREE
 #undef FIO_SET_NAME
-#undef FIO_FORCE_MALLOC_TMP
+#undef FIO_FORCE_MALLOC_TEMP
 
 #endif

@@ -9,10 +9,10 @@ http://facil.io/0.8.x/fiobj_core
 http://facil.io/0.8.x/fiobj
 http://facil.io/0.8.x/fio
 http://facil.io/0.8.x/riskyhash_v1
-http://facil.io/0.8.x/fiobj_ary
+http://facil.io/0.8.x/fiobj_array
 http://facil.io/0.8.x/index
 http://facil.io/0.8.x/fiobj_numbers
-http://facil.io/0.8.x/fiobj_str
+http://facil.io/0.8.x/fiobj_string
 http://facil.io/0.8.x/fiobj_hash
 http://facil.io/0.8.x/fiobj_mustache
 http://facil.io/0.8.x/fiobj_data

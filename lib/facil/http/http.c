@@ -95,9 +95,9 @@ static inline void add_date(http_s *r) {
   if (fio_last_tick().tv_sec > last_date_added) {
     fio_lock(&date_lock);
     if (fio_last_tick().tv_sec > last_date_added) { /* retest inside lock */
-      FIOBJ tmp = fiobj_str_buf(32);
+      FIOBJ tmp = fiobj_string_buffer(32);
       FIOBJ old = current_date;
-      fiobj_str_resize(
+      fiobj_string_resize(
           tmp, http_time2str(fiobj_obj2cstr(tmp).data, fio_last_tick().tv_sec));
       last_date_added = fio_last_tick().tv_sec;
       current_date = tmp;
@@ -108,12 +108,12 @@ static inline void add_date(http_s *r) {
 
   if (!fiobj_hash_get2(r->private_data.out_headers, date_hash)) {
     fiobj_hash_set(r->private_data.out_headers, HTTP_HEADER_DATE,
-                   fiobj_dup(current_date));
+                   fiobj_duplicate(current_date));
   }
-  if (r->status_str == FIOBJ_INVALID &&
+  if (r->status_string == FIOBJ_INVALID &&
       !fiobj_hash_get2(r->private_data.out_headers, mod_hash)) {
     fiobj_hash_set(r->private_data.out_headers, HTTP_HEADER_LAST_MODIFIED,
-                   fiobj_dup(current_date));
+                   fiobj_duplicate(current_date));
   }
 }
 
@@ -134,14 +134,14 @@ static int write_header(FIOBJ o, void *w_) {
     fiobj_each1(o, 0, write_header, w);
     return 0;
   }
-  fio_str_info_s name = fiobj_obj2cstr(w->name);
-  fio_str_info_s str = fiobj_obj2cstr(o);
+  fio_string_info_s name = fiobj_obj2cstr(w->name);
+  fio_string_info_s str = fiobj_obj2cstr(o);
   if (!str.data)
     return 0;
-  fiobj_str_write(w->dest, name.data, name.len);
-  fiobj_str_write(w->dest, ":", 1);
-  fiobj_str_write(w->dest, str.data, str.len);
-  fiobj_str_write(w->dest, "\r\n", 2);
+  fiobj_string_write(w->dest, name.data, name.len);
+  fiobj_string_write(w->dest, ":", 1);
+  fiobj_string_write(w->dest, str.data, str.len);
+  fiobj_string_write(w->dest, "\r\n", 2);
   return 0;
 }
 
@@ -173,11 +173,11 @@ int http_set_header(http_s *r, FIOBJ name, FIOBJ value) {
  *
  * Returns -1 on error and 0 on success.
  */
-int http_set_header2(http_s *r, fio_str_info_s n, fio_str_info_s v) {
+int http_set_header2(http_s *r, fio_string_info_s n, fio_string_info_s v) {
   if (HTTP_INVALID_HANDLE(r) || !n.data || !n.len || (v.data && !v.len))
     return -1;
-  FIOBJ tmp = fiobj_str_new(n.data, n.len);
-  int ret = http_set_header(r, tmp, fiobj_str_new(v.data, v.len));
+  FIOBJ tmp = fiobj_string_new(n.data, n.len);
+  int ret = http_set_header(r, tmp, fiobj_string_new(v.data, v.len));
   fiobj_free(tmp);
   return ret;
 }
@@ -203,8 +203,8 @@ int http_set_cookie(http_s *h, http_cookie_args_s cookie) {
   /* write name and value while auto-correcting encoding issues */
   size_t capa = cookie.name_len + cookie.value_len + 128;
   size_t len = 0;
-  FIOBJ c = fiobj_str_buf(capa);
-  fio_str_info_s t = fiobj_obj2cstr(c);
+  FIOBJ c = fiobj_string_buffer(capa);
+  fio_string_info_s t = fiobj_obj2cstr(c);
 
 #define copy_cookie_ch(ch_var)                                                 \
   if (invalid_cookie_##ch_var##_char[(uint8_t)cookie.ch_var[tmp]]) {           \
@@ -223,7 +223,7 @@ int http_set_cookie(http_s *h, http_cookie_args_s cookie) {
   tmp += 1;                                                                    \
   if (capa <= len + 3) {                                                       \
     capa += 32;                                                                \
-    fiobj_str_capa_assert(c, capa);                                            \
+    fiobj_string_capacity_assert(c, capa);                                            \
     t = fiobj_obj2cstr(c);                                                     \
   }
 
@@ -266,7 +266,7 @@ int http_set_cookie(http_s *h, http_cookie_args_s cookie) {
   t.data[len++] = ';';
   t.data[len++] = ' ';
 
-  if (h->status_str || !h->status) { /* on first request status == 0 */
+  if (h->status_string || !h->status) { /* on first request status == 0 */
     static uint64_t cookie_hash;
     if (!cookie_hash)
       cookie_hash = fiobj_hash_string("cookie", 6);
@@ -274,7 +274,7 @@ int http_set_cookie(http_s *h, http_cookie_args_s cookie) {
     if (!tmp) {
       set_header_add(h->private_data.out_headers, HTTP_HEADER_COOKIE, c);
     } else {
-      fiobj_str_join(tmp, c);
+      fiobj_string_join(tmp, c);
       fiobj_free(c);
     }
     return 0;
@@ -282,7 +282,7 @@ int http_set_cookie(http_s *h, http_cookie_args_s cookie) {
 
   if (capa <= len + 40) {
     capa = len + 40;
-    fiobj_str_capa_assert(c, capa);
+    fiobj_string_capacity_assert(c, capa);
     t = fiobj_obj2cstr(c);
   }
   if (cookie.max_age) {
@@ -292,25 +292,25 @@ int http_set_cookie(http_s *h, http_cookie_args_s cookie) {
     t.data[len++] = ';';
     t.data[len++] = ' ';
   }
-  fiobj_str_resize(c, len);
+  fiobj_string_resize(c, len);
 
   if (cookie.domain && cookie.domain_len) {
-    fiobj_str_write(c, "domain=", 7);
-    fiobj_str_write(c, cookie.domain, cookie.domain_len);
-    fiobj_str_write(c, ";", 1);
+    fiobj_string_write(c, "domain=", 7);
+    fiobj_string_write(c, cookie.domain, cookie.domain_len);
+    fiobj_string_write(c, ";", 1);
     t.data[len++] = ' ';
   }
   if (cookie.path && cookie.path_len) {
-    fiobj_str_write(c, "path=", 5);
-    fiobj_str_write(c, cookie.path, cookie.path_len);
-    fiobj_str_write(c, ";", 1);
+    fiobj_string_write(c, "path=", 5);
+    fiobj_string_write(c, cookie.path, cookie.path_len);
+    fiobj_string_write(c, ";", 1);
     t.data[len++] = ' ';
   }
   if (cookie.http_only) {
-    fiobj_str_write(c, "HttpOnly;", 9);
+    fiobj_string_write(c, "HttpOnly;", 9);
   }
   if (cookie.secure) {
-    fiobj_str_write(c, "secure;", 7);
+    fiobj_string_write(c, "secure;", 7);
   }
   set_header_add(h->private_data.out_headers, HTTP_HEADER_SET_COOKIE, c);
   return 0;
@@ -376,17 +376,17 @@ int http_sendfile2(http_s *h, const char *prefix, size_t prefix_len,
     range_hash = fiobj_hash_string("range", 5);
 
   /* create filename string */
-  FIOBJ filename = fiobj_str_tmp();
+  FIOBJ filename = fiobj_string_tmp();
   if (prefix && prefix_len) {
     /* start with prefix path */
     if (encoded && prefix[prefix_len - 1] == '/' && encoded[0] == '/')
       --prefix_len;
-    fiobj_str_capa_assert(filename, prefix_len + encoded_len + 4);
-    fiobj_str_write(filename, prefix, prefix_len);
+    fiobj_string_capacity_assert(filename, prefix_len + encoded_len + 4);
+    fiobj_string_write(filename, prefix, prefix_len);
   }
   {
     /* decode filename in cases where it's URL encoded */
-    fio_str_info_s tmp = fiobj_obj2cstr(filename);
+    fio_string_info_s tmp = fiobj_obj2cstr(filename);
     if (encoded) {
       char *pos = (char *)encoded;
       const char *end = encoded + encoded_len;
@@ -407,34 +407,34 @@ int http_sendfile2(http_s *h, const char *prefix, size_t prefix_len,
           tmp.data[tmp.len++] = *(pos++);
       }
       tmp.data[tmp.len] = 0;
-      fiobj_str_resize(filename, tmp.len);
+      fiobj_string_resize(filename, tmp.len);
     }
     if (tmp.data[tmp.len - 1] == '/')
-      fiobj_str_write(filename, "index.html", 10);
+      fiobj_string_write(filename, "index.html", 10);
   }
   /* test for file existance  */
 
   int file = -1;
   uint8_t is_gz = 0;
 
-  fio_str_info_s s = fiobj_obj2cstr(filename);
+  fio_string_info_s s = fiobj_obj2cstr(filename);
   {
     FIOBJ tmp = fiobj_hash_get2(h->headers, accept_enc_hash);
     if (!tmp)
       goto no_gzip_support;
-    fio_str_info_s ac_str = fiobj_obj2cstr(tmp);
-    if (!ac_str.data || !strstr(ac_str.data, "gzip"))
+    fio_string_info_s ac_string = fiobj_obj2cstr(tmp);
+    if (!ac_string.data || !strstr(ac_string.data, "gzip"))
       goto no_gzip_support;
     if (s.data[s.len - 3] != '.' || s.data[s.len - 2] != 'g' ||
         s.data[s.len - 1] != 'z') {
-      fiobj_str_write(filename, ".gz", 3);
+      fiobj_string_write(filename, ".gz", 3);
       s = fiobj_obj2cstr(filename);
       if (!stat(s.data, &file_data) &&
           (S_ISREG(file_data.st_mode) || S_ISLNK(file_data.st_mode))) {
         is_gz = 1;
         goto found_file;
       }
-      fiobj_str_resize(filename, s.len - 3);
+      fiobj_string_resize(filename, s.len - 3);
     }
   }
 no_gzip_support:
@@ -444,30 +444,30 @@ no_gzip_support:
 found_file:
   /* set last-modified */
   {
-    FIOBJ tmp = fiobj_str_buf(32);
-    fiobj_str_resize(
+    FIOBJ tmp = fiobj_string_buffer(32);
+    fiobj_string_resize(
         tmp, http_time2str(fiobj_obj2cstr(tmp).data, file_data.st_mtime));
     http_set_header(h, HTTP_HEADER_LAST_MODIFIED, tmp);
   }
   /* set cache-control */
-  http_set_header(h, HTTP_HEADER_CACHE_CONTROL, fiobj_dup(HTTP_HVALUE_MAX_AGE));
+  http_set_header(h, HTTP_HEADER_CACHE_CONTROL, fiobj_duplicate(HTTP_HVALUE_MAX_AGE));
   /* set & test etag */
   uint64_t etag = (uint64_t)file_data.st_size;
   etag ^= (uint64_t)file_data.st_mtime;
   etag = fiobj_hash_string(&etag, sizeof(uint64_t));
-  FIOBJ etag_str = fiobj_str_buf(32);
-  fiobj_str_resize(etag_str,
-                   fio_base64_encode(fiobj_obj2cstr(etag_str).data,
+  FIOBJ etag_string = fiobj_string_buffer(32);
+  fiobj_string_resize(etag_string,
+                   fio_base64_encode(fiobj_obj2cstr(etag_string).data,
                                      (void *)&etag, sizeof(uint64_t)));
   /* set */
-  http_set_header(h, HTTP_HEADER_ETAG, etag_str);
+  http_set_header(h, HTTP_HEADER_ETAG, etag_string);
   /* test */
   {
     static uint64_t none_match_hash = 0;
     if (!none_match_hash)
       none_match_hash = fiobj_hash_string("if-none-match", 13);
     FIOBJ tmp2 = fiobj_hash_get2(h->headers, none_match_hash);
-    if (tmp2 && fiobj_iseq(tmp2, etag_str)) {
+    if (tmp2 && fiobj_iseq(tmp2, etag_string)) {
       h->status = 304;
       http_finish(h);
       return 0;
@@ -481,15 +481,15 @@ found_file:
     if (!ifrange_hash)
       ifrange_hash = fiobj_hash_string("if-range", 8);
     FIOBJ tmp = fiobj_hash_get2(h->headers, ifrange_hash);
-    if (tmp && fiobj_iseq(tmp, etag_str)) {
+    if (tmp && fiobj_iseq(tmp, etag_string)) {
       fiobj_hash_delete2(h->headers, range_hash);
     } else {
       tmp = fiobj_hash_get2(h->headers, range_hash);
       if (tmp) {
         /* range ahead... */
         if (FIOBJ_TYPE_IS(tmp, FIOBJ_T_ARRAY))
-          tmp = fiobj_ary_index(tmp, 0);
-        fio_str_info_s range = fiobj_obj2cstr(tmp);
+          tmp = fiobj_array_index(tmp, 0);
+        fio_string_info_s range = fiobj_obj2cstr(tmp);
         if (!range.data || memcmp("bytes=", range.data, 6))
           goto open_file;
         char *pos = range.data + 6;
@@ -520,15 +520,15 @@ found_file:
         h->status = 206;
 
         {
-          FIOBJ cranges = fiobj_str_buf(1);
-          fiobj_str_printf(cranges, "bytes %lu-%lu/%lu",
+          FIOBJ cranges = fiobj_string_buffer(1);
+          fiobj_string_printf(cranges, "bytes %lu-%lu/%lu",
                            (unsigned long)start_at,
                            (unsigned long)(start_at + length - 1),
                            (unsigned long)file_data.st_size);
           http_set_header(h, HTTP_HEADER_CONTENT_RANGE, cranges);
         }
         http_set_header(h, HTTP_HEADER_ACCEPT_RANGES,
-                        fiobj_dup(HTTP_HVALUE_BYTES));
+                        fiobj_duplicate(HTTP_HVALUE_BYTES));
       }
     }
   }
@@ -537,8 +537,8 @@ found_file:
   switch (s.len) {
   case 7:
     if (!strncasecmp("options", s.data, 7)) {
-      http_set_header2(h, (fio_str_info_s){.data = (char *)"allow", .len = 5},
-                       (fio_str_info_s){.data = (char *)"GET, HEAD", .len = 9});
+      http_set_header2(h, (fio_string_info_s){.data = (char *)"allow", .len = 5},
+                       (fio_string_info_s){.data = (char *)"GET, HEAD", .len = 9});
       h->status = 200;
       http_finish(h);
       return 0;
@@ -572,7 +572,7 @@ open_file:
     uintptr_t pos = 0;
     if (is_gz) {
       http_set_header(h, HTTP_HEADER_CONTENT_ENCODING,
-                      fiobj_dup(HTTP_HVALUE_GZIP));
+                      fiobj_duplicate(HTTP_HVALUE_GZIP));
 
       pos = s.len - 4;
       while (pos && s.data[pos] != '.')
@@ -625,7 +625,7 @@ int http_send_error(http_s *r, size_t error) {
                      pos)) {
     http_set_header(r, HTTP_HEADER_CONTENT_TYPE,
                     http_mimetype_find((char *)"txt", 3));
-    fio_str_info_s t = http_status2str(error);
+    fio_string_info_s t = http_status2str(error);
     http_send_body(r, t.data, t.len);
   }
   return 0;
@@ -777,7 +777,7 @@ void http_resume(http_pause_handle_s *http, void (*task)(http_s *h),
 /**
  * Hijacks the socket away from the HTTP protocol and away from facil.io.
  */
-intptr_t http_hijack(http_s *h, fio_str_info_s *leftover) {
+intptr_t http_hijack(http_s *h, fio_string_info_s *leftover) {
   if (!h)
     return -1;
   return ((http_vtable_s *)h->private_data.vtbl)->http_hijack(h, leftover);
@@ -816,8 +816,8 @@ static http_settings_s *http_settings_new(http_settings_s arg_settings) {
     arg_settings.max_header_size = 32 * 1024; /* defaults to 32Kib seconds */
   if (arg_settings.max_clients <= 0 ||
       (size_t)(arg_settings.max_clients + HTTP_BUSY_UNLESS_HAS_FDS) >
-          fio_capa()) {
-    arg_settings.max_clients = fio_capa();
+          fio_capacity()) {
+    arg_settings.max_clients = fio_capacity();
     if ((ssize_t)arg_settings.max_clients - HTTP_BUSY_UNLESS_HAS_FDS > 0)
       arg_settings.max_clients -= HTTP_BUSY_UNLESS_HAS_FDS;
   }
@@ -935,7 +935,7 @@ struct http_settings_s *http_settings(http_s *r) {
 /**
  * Returns the direct address of the connected peer (likely an intermediary).
  */
-fio_str_info_s http_peer_addr(http_s *h) {
+fio_string_info_s http_peer_addr(http_s *h) {
   return fio_peer_addr(((http_fio_protocol_s *)h->private_data.flag)->uuid);
 }
 
@@ -1052,7 +1052,7 @@ intptr_t http_connect FIO_IGNORE_MACRO(const char *url,
       goto on_error;
     }
     if (u.path.data) {
-      path = fiobj_str_new(
+      path = fiobj_string_new(
           u.path.data, strlen(u.path.data)); /* copy query and target as well */
     }
     if (unix_address) {
@@ -1115,8 +1115,8 @@ intptr_t http_connect FIO_IGNORE_MACRO(const char *url,
   settings->udata = h;
   settings->tls = arg_settings.tls;
   if (host)
-    http_set_header2(h, (fio_str_info_s){.data = (char *)"host", .len = 4},
-                     (fio_str_info_s){.data = host, .len = h_len});
+    http_set_header2(h, (fio_string_info_s){.data = (char *)"host", .len = 4},
+                     (fio_string_info_s){.data = host, .len = h_len});
   intptr_t ret;
   if (is_websocket) {
     /* force HTTP/1.1 */
@@ -1152,7 +1152,7 @@ static void on_websocket_http_connected(http_s *h) {
   if (!h->path) {
     FIO_LOG_WARNING("(websocket client) path not specified in "
                     "address, assuming root!");
-    h->path = fiobj_str_new("/", 1);
+    h->path = fiobj_string_new("/", 1);
   }
   http_upgrade2ws(h, *s);
   fio_free(s);
@@ -1190,17 +1190,17 @@ Note:
 ***************************************************************************** */
 
 static inline void http_sse_copy2str(FIOBJ dest, char *prefix, size_t pre_len,
-                                     fio_str_info_s data) {
+                                     fio_string_info_s data) {
   if (!data.len)
     return;
   const char *stop = data.data + data.len;
   while (data.len) {
-    fiobj_str_write(dest, prefix, pre_len);
+    fiobj_string_write(dest, prefix, pre_len);
     char *pos = data.data;
     while (pos < stop && *pos != '\n' && *pos != '\r')
       ++pos;
-    fiobj_str_write(dest, data.data, (uintptr_t)(pos - data.data));
-    fiobj_str_write(dest, "\r\n", 2);
+    fiobj_string_write(dest, data.data, (uintptr_t)(pos - data.data));
+    fiobj_string_write(dest, "\r\n", 2);
     if (*pos == '\r')
       ++pos;
     if (*pos == '\n')
@@ -1228,8 +1228,8 @@ postpone:
   return;
 }
 
-static void http_sse_on_message__direct(http_sse_s *sse, fio_str_info_s channel,
-                                        fio_str_info_s msg, void *udata) {
+static void http_sse_on_message__direct(http_sse_s *sse, fio_string_info_s channel,
+                                        fio_string_info_s msg, void *udata) {
   http_sse_write(sse, .data = msg);
   (void)udata;
   (void)channel;
@@ -1339,18 +1339,18 @@ int http_sse_write(http_sse_s *sse, struct http_sse_write_args args) {
     /* best guess at data length, ignoring missing fields and multiline data */
     const size_t total = 4 + args.id.len + 2 + 7 + args.event.len + 2 + 6 +
                          args.data.len + 2 + 7 + 10 + 4;
-    buf = fiobj_str_buf(total);
+    buf = fiobj_string_buffer(total);
   }
   http_sse_copy2str(buf, (char *)"id: ", 4, args.id);
   http_sse_copy2str(buf, (char *)"event: ", 7, args.event);
   if (args.retry) {
     FIOBJ i = fiobj_num_new(args.retry);
-    fiobj_str_write(buf, (char *)"retry: ", 7);
-    fiobj_str_join(buf, i);
+    fiobj_string_write(buf, (char *)"retry: ", 7);
+    fiobj_string_join(buf, i);
     fiobj_free(i);
   }
   http_sse_copy2str(buf, (char *)"data: ", 6, args.data);
-  fiobj_str_write(buf, "\r\n", 2);
+  fiobj_string_write(buf, "\r\n", 2);
   return FIO_LS_EMBD_OBJ(http_sse_internal_s, sse, sse)
       ->vtable->http_sse_write(sse, buf);
 }
@@ -1381,7 +1381,7 @@ int http_sse_close(http_sse_s *sse) {
  *
  * Returns the same object (increases a reference count, no allocation is made).
  */
-http_sse_s *http_sse_dup(http_sse_s *sse) {
+http_sse_s *http_sse_duplicate(http_sse_s *sse) {
   fio_atomic_add(&FIO_LS_EMBD_OBJ(http_sse_internal_s, sse, sse)->ref, 1);
   return sse;
 }
@@ -1398,22 +1398,22 @@ HTTP GET and POST parsing helpers
 ***************************************************************************** */
 
 /** URL decodes a string, returning a `FIOBJ`. */
-static inline FIOBJ http_urlstr2fiobj(char *s, size_t len) {
-  FIOBJ o = fiobj_str_buf(len);
+static inline FIOBJ http_urlstring_to_fiobj(char *s, size_t len) {
+  FIOBJ o = fiobj_string_buffer(len);
   ssize_t l = http_decode_url(fiobj_obj2cstr(o).data, s, len);
   if (l < 0) {
     fiobj_free(o);
-    return fiobj_str_new(NULL, 0); /* empty string */
+    return fiobj_string_new(NULL, 0); /* empty string */
   }
-  fiobj_str_resize(o, (size_t)l);
+  fiobj_string_resize(o, (size_t)l);
   return o;
 }
 
 /** converts a string into a `FIOBJ`. */
-static inline FIOBJ http_str2fiobj(char *s, size_t len, uint8_t encoded) {
+static inline FIOBJ http_string_to_fiobj(char *s, size_t len, uint8_t encoded) {
   switch (len) {
   case 0:
-    return fiobj_str_new(NULL, 0); /* empty string */
+    return fiobj_string_new(NULL, 0); /* empty string */
   case 4:
     if (!strncasecmp(s, "true", 4))
       return fiobj_true();
@@ -1437,8 +1437,8 @@ static inline FIOBJ http_str2fiobj(char *s, size_t len, uint8_t encoded) {
       return fiobj_float_new(tmp);
   }
   if (encoded)
-    return http_urlstr2fiobj(s, len);
-  return fiobj_str_new(s, len);
+    return http_urlstring_to_fiobj(s, len);
+  return fiobj_string_new(s, len);
 }
 
 /** Parses the query part of an HTTP request/response. Uses `http_add2hash`. */
@@ -1447,7 +1447,7 @@ void http_parse_query(http_s *h) {
     return;
   if (!h->params)
     h->params = fiobj_hash_new();
-  fio_str_info_s q = fiobj_obj2cstr(h->query);
+  fio_string_info_s q = fiobj_obj2cstr(h->query);
   do {
     char *cut = memchr(q.data, '&', q.len);
     if (!cut)
@@ -1470,11 +1470,11 @@ void http_parse_query(http_s *h) {
   } while (q.len);
 }
 
-static inline void http_parse_cookies_cookie_str(FIOBJ dest, FIOBJ str,
+static inline void http_parse_cookies_cookie_string(FIOBJ dest, FIOBJ str,
                                                  uint8_t is_url_encoded) {
   if (!FIOBJ_TYPE_IS(str, FIOBJ_T_STRING))
     return;
-  fio_str_info_s s = fiobj_obj2cstr(str);
+  fio_string_info_s s = fiobj_obj2cstr(str);
   while (s.len) {
     if (s.data[0] == ' ') {
       ++s.data;
@@ -1496,11 +1496,11 @@ static inline void http_parse_cookies_cookie_str(FIOBJ dest, FIOBJ str,
     s.data = cut2 + 1;
   }
 }
-static inline void http_parse_cookies_setcookie_str(FIOBJ dest, FIOBJ str,
+static inline void http_parse_cookies_setcookie_string(FIOBJ dest, FIOBJ str,
                                                     uint8_t is_url_encoded) {
   if (!FIOBJ_TYPE_IS(str, FIOBJ_T_STRING))
     return;
-  fio_str_info_s s = fiobj_obj2cstr(str);
+  fio_string_info_s s = fiobj_obj2cstr(str);
   char *cut = memchr(s.data, '=', s.len);
   if (!cut)
     cut = s.data;
@@ -1529,14 +1529,14 @@ void http_parse_cookies(http_s *h, uint8_t is_url_encoded) {
       h->cookies = fiobj_hash_new();
     if (FIOBJ_TYPE_IS(c, FIOBJ_T_ARRAY)) {
       /* Array of Strings */
-      size_t count = fiobj_ary_count(c);
+      size_t count = fiobj_array_count(c);
       for (size_t i = 0; i < count; ++i) {
-        http_parse_cookies_cookie_str(
-            h->cookies, fiobj_ary_index(c, (int64_t)i), is_url_encoded);
+        http_parse_cookies_cookie_string(
+            h->cookies, fiobj_array_index(c, (int64_t)i), is_url_encoded);
       }
     } else {
       /* single string */
-      http_parse_cookies_cookie_str(h->cookies, c, is_url_encoded);
+      http_parse_cookies_cookie_string(h->cookies, c, is_url_encoded);
     }
   }
   c = fiobj_hash_get2(h->headers, fiobj_obj2hash(HTTP_HEADER_SET_COOKIE));
@@ -1545,14 +1545,14 @@ void http_parse_cookies(http_s *h, uint8_t is_url_encoded) {
       h->cookies = fiobj_hash_new();
     if (FIOBJ_TYPE_IS(c, FIOBJ_T_ARRAY)) {
       /* Array of Strings */
-      size_t count = fiobj_ary_count(c);
+      size_t count = fiobj_array_count(c);
       for (size_t i = 0; i < count; ++i) {
-        http_parse_cookies_setcookie_str(
-            h->cookies, fiobj_ary_index(c, (int64_t)i), is_url_encoded);
+        http_parse_cookies_setcookie_string(
+            h->cookies, fiobj_array_index(c, (int64_t)i), is_url_encoded);
       }
     } else {
       /* single string */
-      http_parse_cookies_setcookie_str(h->cookies, c, is_url_encoded);
+      http_parse_cookies_setcookie_string(h->cookies, c, is_url_encoded);
     }
   }
 }
@@ -1577,7 +1577,7 @@ int http_add2hash2(FIOBJ dest, char *name, size_t name_len, FIOBJ val,
                    uint8_t encoded) {
   if (!name)
     goto error;
-  FIOBJ nested_ary = FIOBJ_INVALID;
+  FIOBJ nested_array = FIOBJ_INVALID;
   char *cut1;
   /* we can't start with an empty object name */
   while (name_len && name[0] == '[') {
@@ -1626,35 +1626,35 @@ rebase:
 
     /* we have name[][key...= */
 
-    /* ensure array exists and it's an array + set nested_ary */
+    /* ensure array exists and it's an array + set nested_array */
     const size_t len = ((cut1[-1] == ']') ? (size_t)((cut1 - 1) - name)
                                           : (size_t)(cut1 - name));
     const uint64_t hash =
         fiobj_hash_string(name, len); /* hash the current name */
-    nested_ary = fiobj_hash_get2(dest, hash);
-    if (!nested_ary) {
+    nested_array = fiobj_hash_get2(dest, hash);
+    if (!nested_array) {
       /* create a new nested array */
       FIOBJ key =
-          encoded ? http_urlstr2fiobj(name, len) : fiobj_str_new(name, len);
-      nested_ary = fiobj_ary_new2(4);
-      fiobj_hash_set(dest, key, nested_ary);
+          encoded ? http_urlstring_to_fiobj(name, len) : fiobj_string_new(name, len);
+      nested_array = fiobj_array_new2(4);
+      fiobj_hash_set(dest, key, nested_array);
       fiobj_free(key);
-    } else if (!FIOBJ_TYPE_IS(nested_ary, FIOBJ_T_ARRAY)) {
+    } else if (!FIOBJ_TYPE_IS(nested_array, FIOBJ_T_ARRAY)) {
       /* convert existing object to an array - auto error correction */
       FIOBJ key =
-          encoded ? http_urlstr2fiobj(name, len) : fiobj_str_new(name, len);
-      FIOBJ tmp = fiobj_ary_new2(4);
-      fiobj_ary_push(tmp, nested_ary);
-      nested_ary = tmp;
-      fiobj_hash_set(dest, key, nested_ary);
+          encoded ? http_urlstring_to_fiobj(name, len) : fiobj_string_new(name, len);
+      FIOBJ tmp = fiobj_array_new2(4);
+      fiobj_array_push(tmp, nested_array);
+      nested_array = tmp;
+      fiobj_hash_set(dest, key, nested_array);
       fiobj_free(key);
     }
 
     /* test if last object in the array is a hash - create hash if not */
-    dest = fiobj_ary_index(nested_ary, -1);
+    dest = fiobj_array_index(nested_array, -1);
     if (!dest || !FIOBJ_TYPE_IS(dest, FIOBJ_T_HASH)) {
       dest = fiobj_hash_new();
-      fiobj_ary_push(nested_ary, dest);
+      fiobj_array_push(nested_array, dest);
     }
 
     /* rebase `name` to `key` and restart. */
@@ -1673,7 +1673,7 @@ rebase:
     if (!tmp) {
       /* hash doesn't exist, create it */
       FIOBJ key =
-          encoded ? http_urlstr2fiobj(name, len) : fiobj_str_new(name, len);
+          encoded ? http_urlstring_to_fiobj(name, len) : fiobj_string_new(name, len);
       tmp = fiobj_hash_new();
       fiobj_hash_set(dest, key, tmp);
       fiobj_free(key);
@@ -1683,7 +1683,7 @@ rebase:
     }
     dest = tmp;
     /* no rollback is possible once we enter the new nesting level... */
-    nested_ary = FIOBJ_INVALID;
+    nested_array = FIOBJ_INVALID;
     /* rebase `name` to `key` and restart. */
     cut1 += 1; /* consume "[" */
     name_len -= (size_t)(cut1 - name);
@@ -1695,22 +1695,22 @@ place_in_hash:
   if (name[name_len - 1] == ']')
     --name_len;
   {
-    FIOBJ key = encoded ? http_urlstr2fiobj(name, name_len)
-                        : fiobj_str_new(name, name_len);
+    FIOBJ key = encoded ? http_urlstring_to_fiobj(name, name_len)
+                        : fiobj_string_new(name, name_len);
     FIOBJ old = fiobj_hash_replace(dest, key, val);
     if (old) {
-      if (nested_ary) {
+      if (nested_array) {
         fiobj_hash_replace(dest, key, old);
         old = fiobj_hash_new();
         fiobj_hash_set(old, key, val);
-        fiobj_ary_push(nested_ary, old);
+        fiobj_array_push(nested_array, old);
       } else {
         if (!FIOBJ_TYPE_IS(old, FIOBJ_T_ARRAY)) {
-          FIOBJ tmp = fiobj_ary_new2(4);
-          fiobj_ary_push(tmp, old);
+          FIOBJ tmp = fiobj_array_new2(4);
+          fiobj_array_push(tmp, old);
           old = tmp;
         }
-        fiobj_ary_push(old, val);
+        fiobj_array_push(old, val);
         fiobj_hash_replace(dest, key, old);
       }
     }
@@ -1725,21 +1725,21 @@ place_in_array:
     uint64_t hash = fiobj_hash_string(name, name_len);
     FIOBJ ary = fiobj_hash_get2(dest, hash);
     if (!ary) {
-      FIOBJ key = encoded ? http_urlstr2fiobj(name, name_len)
-                          : fiobj_str_new(name, name_len);
-      ary = fiobj_ary_new2(4);
+      FIOBJ key = encoded ? http_urlstring_to_fiobj(name, name_len)
+                          : fiobj_string_new(name, name_len);
+      ary = fiobj_array_new2(4);
       fiobj_hash_set(dest, key, ary);
       fiobj_free(key);
     } else if (!FIOBJ_TYPE_IS(ary, FIOBJ_T_ARRAY)) {
-      FIOBJ tmp = fiobj_ary_new2(4);
-      fiobj_ary_push(tmp, ary);
+      FIOBJ tmp = fiobj_array_new2(4);
+      fiobj_array_push(tmp, ary);
       ary = tmp;
-      FIOBJ key = encoded ? http_urlstr2fiobj(name, name_len)
-                          : fiobj_str_new(name, name_len);
+      FIOBJ key = encoded ? http_urlstring_to_fiobj(name, name_len)
+                          : fiobj_string_new(name, name_len);
       fiobj_hash_replace(dest, key, ary);
       fiobj_free(key);
     }
-    fiobj_ary_push(ary, val);
+    fiobj_array_push(ary, val);
   }
   return 0;
 error:
@@ -1767,7 +1767,7 @@ error:
 int http_add2hash(FIOBJ dest, char *name, size_t name_len, char *value,
                   size_t value_len, uint8_t encoded) {
   return http_add2hash2(dest, name, name_len,
-                        http_str2fiobj(value, value_len, encoded), encoded);
+                        http_string_to_fiobj(value, value_len, encoded), encoded);
 }
 
 /* *****************************************************************************
@@ -1778,7 +1778,7 @@ HTTP Body Parsing
 typedef struct {
   http_mime_parser_s p;
   http_s *h;
-  fio_str_info_s buffer;
+  fio_string_info_s buffer;
   size_t pos;
   size_t partial_offset;
   size_t partial_length;
@@ -1798,19 +1798,19 @@ static void http_mime_parser_on_data(http_mime_parser_s *parser, void *name,
                   value, value_len, 0);
     return;
   }
-  FIOBJ n = fiobj_str_new(name, name_len);
-  fiobj_str_write(n, "[data]", 6);
-  fio_str_info_s tmp = fiobj_obj2cstr(n);
+  FIOBJ n = fiobj_string_new(name, name_len);
+  fiobj_string_write(n, "[data]", 6);
+  fio_string_info_s tmp = fiobj_obj2cstr(n);
   http_add2hash(http_mime_parser2fio(parser)->h->params, tmp.data, tmp.len,
                 value, value_len, 0);
-  fiobj_str_resize(n, name_len);
-  fiobj_str_write(n, "[name]", 6);
+  fiobj_string_resize(n, name_len);
+  fiobj_string_write(n, "[name]", 6);
   tmp = fiobj_obj2cstr(n);
   http_add2hash(http_mime_parser2fio(parser)->h->params, tmp.data, tmp.len,
                 filename, filename_len, 0);
   if (mimetype_len) {
-    fiobj_str_resize(n, name_len);
-    fiobj_str_write(n, "[type]", 6);
+    fiobj_string_resize(n, name_len);
+    fiobj_string_write(n, "[type]", 6);
     tmp = fiobj_obj2cstr(n);
     http_add2hash(http_mime_parser2fio(parser)->h->params, tmp.data, tmp.len,
                   mimetype, mimetype_len, 0);
@@ -1824,25 +1824,25 @@ static void http_mime_parser_on_partial_start(
     size_t filename_len, void *mimetype, size_t mimetype_len) {
   http_mime_parser2fio(parser)->partial_length = 0;
   http_mime_parser2fio(parser)->partial_offset = 0;
-  http_mime_parser2fio(parser)->partial_name = fiobj_str_new(name, name_len);
+  http_mime_parser2fio(parser)->partial_name = fiobj_string_new(name, name_len);
 
   if (!filename)
     return;
 
-  fiobj_str_write(http_mime_parser2fio(parser)->partial_name, "[type]", 6);
-  fio_str_info_s tmp =
+  fiobj_string_write(http_mime_parser2fio(parser)->partial_name, "[type]", 6);
+  fio_string_info_s tmp =
       fiobj_obj2cstr(http_mime_parser2fio(parser)->partial_name);
   http_add2hash(http_mime_parser2fio(parser)->h->params, tmp.data, tmp.len,
                 mimetype, mimetype_len, 0);
 
-  fiobj_str_resize(http_mime_parser2fio(parser)->partial_name, name_len);
-  fiobj_str_write(http_mime_parser2fio(parser)->partial_name, "[name]", 6);
+  fiobj_string_resize(http_mime_parser2fio(parser)->partial_name, name_len);
+  fiobj_string_write(http_mime_parser2fio(parser)->partial_name, "[name]", 6);
   tmp = fiobj_obj2cstr(http_mime_parser2fio(parser)->partial_name);
   http_add2hash(http_mime_parser2fio(parser)->h->params, tmp.data, tmp.len,
                 filename, filename_len, 0);
 
-  fiobj_str_resize(http_mime_parser2fio(parser)->partial_name, name_len);
-  fiobj_str_write(http_mime_parser2fio(parser)->partial_name, "[data]", 6);
+  fiobj_string_resize(http_mime_parser2fio(parser)->partial_name, name_len);
+  fiobj_string_write(http_mime_parser2fio(parser)->partial_name, "[data]", 6);
 }
 
 /** Called when partial data is available. */
@@ -1860,14 +1860,14 @@ static void http_mime_parser_on_partial_data(http_mime_parser_s *parser,
 /** Called when the partial data is complete. */
 static void http_mime_parser_on_partial_end(http_mime_parser_s *parser) {
 
-  fio_str_info_s tmp =
+  fio_string_info_s tmp =
       fiobj_obj2cstr(http_mime_parser2fio(parser)->partial_name);
   FIOBJ o = FIOBJ_INVALID;
   if (!http_mime_parser2fio(parser)->partial_length)
     return;
   if (http_mime_parser2fio(parser)->partial_length < 42) {
     /* short data gets a new object */
-    o = fiobj_str_new(http_mime_parser2fio(parser)->buffer.data +
+    o = fiobj_string_new(http_mime_parser2fio(parser)->buffer.data +
                           http_mime_parser2fio(parser)->partial_offset,
                       http_mime_parser2fio(parser)->partial_length);
   } else {
@@ -1910,7 +1910,7 @@ int http_parse_body(http_s *h) {
   if (!content_type_hash)
     content_type_hash = fiobj_hash_string("content-type", 12);
   FIOBJ ct = fiobj_hash_get2(h->headers, content_type_hash);
-  fio_str_info_s content_type = fiobj_obj2cstr(ct);
+  fio_string_info_s content_type = fiobj_obj2cstr(ct);
   if (content_type.len < 16)
     return -1;
   if (content_type.len >= 33 &&
@@ -1934,7 +1934,7 @@ int http_parse_body(http_s *h) {
     if (FIOBJ_TYPE_IS(h->params, FIOBJ_T_HASH))
       return 0;
     FIOBJ tmp = h->params;
-    FIOBJ key = fiobj_str_new("JSON", 4);
+    FIOBJ key = fiobj_string_new("JSON", 4);
     h->params = fiobj_hash_new2(4);
     fiobj_hash_set(h->params, key, tmp);
     fiobj_free(key);
@@ -1971,47 +1971,47 @@ FIOBJ http_req2str(http_s *h) {
     return FIOBJ_INVALID;
 
   struct header_writer_s w;
-  w.dest = fiobj_str_buf(0);
-  if (h->status_str) {
-    fiobj_str_join(w.dest, h->version);
-    fiobj_str_write(w.dest, " ", 1);
-    fiobj_str_join(w.dest, fiobj_num_tmp(h->status));
-    fiobj_str_write(w.dest, " ", 1);
-    fiobj_str_join(w.dest, h->status_str);
-    fiobj_str_write(w.dest, "\r\n", 2);
+  w.dest = fiobj_string_buffer(0);
+  if (h->status_string) {
+    fiobj_string_join(w.dest, h->version);
+    fiobj_string_write(w.dest, " ", 1);
+    fiobj_string_join(w.dest, fiobj_num_tmp(h->status));
+    fiobj_string_write(w.dest, " ", 1);
+    fiobj_string_join(w.dest, h->status_string);
+    fiobj_string_write(w.dest, "\r\n", 2);
   } else {
-    fiobj_str_join(w.dest, h->method);
-    fiobj_str_write(w.dest, " ", 1);
-    fiobj_str_join(w.dest, h->path);
+    fiobj_string_join(w.dest, h->method);
+    fiobj_string_write(w.dest, " ", 1);
+    fiobj_string_join(w.dest, h->path);
     if (h->query) {
-      fiobj_str_write(w.dest, "?", 1);
-      fiobj_str_join(w.dest, h->query);
+      fiobj_string_write(w.dest, "?", 1);
+      fiobj_string_join(w.dest, h->query);
     }
     {
-      fio_str_info_s t = fiobj_obj2cstr(h->version);
+      fio_string_info_s t = fiobj_obj2cstr(h->version);
       if (t.len < 6 || t.data[5] != '1')
-        fiobj_str_write(w.dest, " HTTP/1.1\r\n", 10);
+        fiobj_string_write(w.dest, " HTTP/1.1\r\n", 10);
       else {
-        fiobj_str_write(w.dest, " ", 1);
-        fiobj_str_join(w.dest, h->version);
-        fiobj_str_write(w.dest, "\r\n", 2);
+        fiobj_string_write(w.dest, " ", 1);
+        fiobj_string_join(w.dest, h->version);
+        fiobj_string_write(w.dest, "\r\n", 2);
       }
     }
   }
 
   fiobj_each1(h->headers, 0, write_header, &w);
-  fiobj_str_write(w.dest, "\r\n", 2);
+  fiobj_string_write(w.dest, "\r\n", 2);
   if (h->body) {
     // fiobj_data_seek(h->body, 0);
-    // fio_str_info_s t = fiobj_data_read(h->body, 0);
-    // fiobj_str_write(w.dest, t.data, t.len);
-    fiobj_str_join(w.dest, h->body);
+    // fio_string_info_s t = fiobj_data_read(h->body, 0);
+    // fiobj_string_write(w.dest, t.data, t.len);
+    fiobj_string_join(w.dest, h->body);
   }
   return w.dest;
 }
 
 void http_write_log(http_s *h) {
-  FIOBJ l = fiobj_str_buf(128);
+  FIOBJ l = fiobj_string_buffer(128);
 
   intptr_t bytes_sent = fiobj_obj2num(fiobj_hash_get2(
       h->private_data.out_headers, fiobj_obj2hash(HTTP_HEADER_CONTENT_LENGTH)));
@@ -2022,10 +2022,10 @@ void http_write_log(http_s *h) {
 
   {
     // TODO Guess IP address from headers (forwarded) where possible
-    fio_str_info_s peer = fio_peer_addr(http2protocol(h)->uuid);
-    fiobj_str_write(l, peer.data, peer.len);
+    fio_string_info_s peer = fio_peer_addr(http2protocol(h)->uuid);
+    fiobj_string_write(l, peer.data, peer.len);
   }
-  fio_str_info_s buff = fiobj_obj2cstr(l);
+  fio_string_info_s buff = fiobj_obj2cstr(l);
 
   if (buff.len == 0) {
     memcpy(buff.data, "[unknown]", 9);
@@ -2033,36 +2033,36 @@ void http_write_log(http_s *h) {
   }
   memcpy(buff.data + buff.len, " - - [", 6);
   buff.len += 6;
-  fiobj_str_resize(l, buff.len);
+  fiobj_string_resize(l, buff.len);
   {
     FIOBJ date;
     fio_lock(&date_lock);
-    date = fiobj_dup(current_date);
+    date = fiobj_duplicate(current_date);
     fio_unlock(&date_lock);
-    fiobj_str_join(l, current_date);
+    fiobj_string_join(l, current_date);
     fiobj_free(date);
   }
-  fiobj_str_write(l, "] \"", 3);
-  fiobj_str_join(l, h->method);
-  fiobj_str_write(l, " ", 1);
-  fiobj_str_join(l, h->path);
-  fiobj_str_write(l, " ", 1);
-  fiobj_str_join(l, h->version);
-  fiobj_str_write(l, "\" ", 2);
+  fiobj_string_write(l, "] \"", 3);
+  fiobj_string_join(l, h->method);
+  fiobj_string_write(l, " ", 1);
+  fiobj_string_join(l, h->path);
+  fiobj_string_write(l, " ", 1);
+  fiobj_string_join(l, h->version);
+  fiobj_string_write(l, "\" ", 2);
   if (bytes_sent > 0) {
-    fiobj_str_write_i(l, h->status);
-    fiobj_str_write(l, " ", 1);
-    fiobj_str_write_i(l, bytes_sent);
-    fiobj_str_write(l, "b ", 2);
+    fiobj_string_write_i(l, h->status);
+    fiobj_string_write(l, " ", 1);
+    fiobj_string_write_i(l, bytes_sent);
+    fiobj_string_write(l, "b ", 2);
   } else {
-    fiobj_str_join(l, fiobj_num_tmp(h->status));
-    fiobj_str_write(l, " -- ", 4);
+    fiobj_string_join(l, fiobj_num_tmp(h->status));
+    fiobj_string_write(l, " -- ", 4);
   }
 
   bytes_sent = ((end.tv_sec - start.tv_sec) * 1000) +
                ((end.tv_nsec - start.tv_nsec) / 1000000);
-  fiobj_str_write_i(l, bytes_sent);
-  fiobj_str_write(l, "ms\r\n", 4);
+  fiobj_string_write_i(l, bytes_sent);
+  fiobj_string_write(l, "ms\r\n", 4);
 
   buff = fiobj_obj2cstr(l);
   fwrite(buff.data, 1, buff.len, stderr);
@@ -2470,11 +2470,11 @@ ssize_t http_decode_path_unsafe(char *dest, const char *url_data) {
 Lookup Tables / functions
 ***************************************************************************** */
 
-#define FIO_FORCE_MALLOC_TMP 1 /* use malloc for the mime registry */
+#define FIO_FORCE_MALLOC_TEMP 1 /* use malloc for the mime registry */
 #define FIO_SET_NAME fio_mime_set
 #define FIO_SET_OBJ_TYPE FIOBJ
 #define FIO_SET_OBJ_COMPARE(o1, o2) (1)
-#define FIO_SET_OBJ_COPY(dest, o) (dest) = fiobj_dup((o))
+#define FIO_SET_OBJ_COPY(dest, o) (dest) = fiobj_duplicate((o))
 #define FIO_SET_OBJ_DESTROY(o) fiobj_free((o))
 
 #include <fio.h>
@@ -2485,20 +2485,20 @@ static fio_mime_set_s fio_http_mime_types = FIO_SET_INIT;
 
 /** Registers a Mime-Type to be associated with the file extension. */
 void http_mimetype_register(char *file_ext, size_t file_ext_len,
-                            FIOBJ mime_type_str) {
+                            FIOBJ mime_type_string) {
   uintptr_t hash = FIO_HASH_FN(file_ext, file_ext_len, 0, 0);
-  if (mime_type_str == FIOBJ_INVALID) {
+  if (mime_type_string == FIOBJ_INVALID) {
     fio_mime_set_remove(&fio_http_mime_types, hash, FIOBJ_INVALID, NULL);
   } else {
     FIOBJ old = FIOBJ_INVALID;
-    fio_mime_set_overwrite(&fio_http_mime_types, hash, mime_type_str, &old);
+    fio_mime_set_overwrite(&fio_http_mime_types, hash, mime_type_string, &old);
     if (old != FIOBJ_INVALID) {
       FIO_LOG_WARNING("mime-type collision: %.*s was %s, now %s",
                       (int)file_ext_len, file_ext, fiobj_obj2cstr(old).data,
-                      fiobj_obj2cstr(mime_type_str).data);
+                      fiobj_obj2cstr(mime_type_string).data);
       fiobj_free(old);
     }
-    fiobj_free(mime_type_str); /* move ownership to the registry */
+    fiobj_free(mime_type_string); /* move ownership to the registry */
   }
 }
 
@@ -2506,7 +2506,7 @@ void http_mimetype_register(char *file_ext, size_t file_ext_len,
 void http_mimetype_stats(void) {
   FIO_LOG_DEBUG("HTTP MIME hash storage count/capa: %zu / %zu",
                 fio_mime_set_count(&fio_http_mime_types),
-                fio_mime_set_capa(&fio_http_mime_types));
+                fio_mime_set_capacity(&fio_http_mime_types));
 }
 
 /**
@@ -2515,7 +2515,7 @@ void http_mimetype_stats(void) {
  */
 FIOBJ http_mimetype_find(char *file_ext, size_t file_ext_len) {
   uintptr_t hash = FIO_HASH_FN(file_ext, file_ext_len, 0, 0);
-  return fiobj_dup(
+  return fiobj_duplicate(
       fio_mime_set_find(&fio_http_mime_types, hash, FIOBJ_INVALID));
 }
 
@@ -2525,11 +2525,11 @@ FIOBJ http_mimetype_find(char *file_ext, size_t file_ext_len) {
  */
 FIOBJ http_mimetype_find2(FIOBJ url) {
   static __thread char buffer[LONGEST_FILE_EXTENSION_LENGTH + 1];
-  fio_str_info_s ext = {.data = NULL};
+  fio_string_info_s ext = {.data = NULL};
   FIOBJ mimetype;
   if (!url)
     goto finish;
-  fio_str_info_s tmp = fiobj_obj2cstr(url);
+  fio_string_info_s tmp = fiobj_obj2cstr(url);
   uint8_t steps = 1;
   while (tmp.len > steps || steps >= LONGEST_FILE_EXTENSION_LENGTH) {
     switch (tmp.data[tmp.len - steps]) {
@@ -2553,7 +2553,7 @@ FIOBJ http_mimetype_find2(FIOBJ url) {
 finish:
   mimetype = http_mimetype_find(ext.data, ext.len);
   if (!mimetype)
-    mimetype = fiobj_dup(HTTP_HVALUE_CONTENT_TYPE_DEFAULT);
+    mimetype = fiobj_duplicate(HTTP_HVALUE_CONTENT_TYPE_DEFAULT);
   return mimetype;
 }
 
@@ -2609,8 +2609,8 @@ static char invalid_cookie_value_char[256] = {
 // clang-format on
 
 /** Returns the status as a C string struct */
-fio_str_info_s http_status2str(uintptr_t status) {
-  static const fio_str_info_s status2str[] = {
+fio_string_info_s http_status2str(uintptr_t status) {
+  static const fio_string_info_s status2str[] = {
       HTTP_SET_STATUS_STR(100, "Continue"),
       HTTP_SET_STATUS_STR(101, "Switching Protocols"),
       HTTP_SET_STATUS_STR(102, "Processing"),
@@ -2676,7 +2676,7 @@ fio_str_info_s http_status2str(uintptr_t status) {
       HTTP_SET_STATUS_STR(510, "Not Extended"),
       HTTP_SET_STATUS_STR(511, "Network Authentication Required"),
   };
-  fio_str_info_s ret = (fio_str_info_s){.len = 0, .data = NULL};
+  fio_string_info_s ret = (fio_string_info_s){.len = 0, .data = NULL};
   if (status >= 100 &&
       (status - 100) < sizeof(status2str) / sizeof(status2str[0]))
     ret = status2str[status - 100];

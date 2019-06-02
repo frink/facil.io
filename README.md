@@ -44,7 +44,7 @@ FIOBJ HTTP_X_DATA;
 // Listen to HTTP requests and start facil.io
 int main(int argc, char const **argv) {
   // allocating values we use often
-  HTTP_X_DATA = fiobj_str_new("X-Data", 6);
+  HTTP_X_DATA = fiobj_string_new("X-Data", 6);
   // listen on port 3000 and any available network binding (NULL == 0.0.0.0)
   http_listen("3000", NULL, .on_request = on_request, .log = 1);
   // start the server
@@ -59,7 +59,7 @@ void on_request(http_s *request) {
                   .value_len = 4);
   http_set_header(request, HTTP_HEADER_CONTENT_TYPE,
                   http_mimetype_find("txt", 3));
-  http_set_header(request, HTTP_X_DATA, fiobj_str_new("my data", 7));
+  http_set_header(request, HTTP_X_DATA, fiobj_string_new("my data", 7));
   http_send_body(request, "Hello World!\r\n", 14);
 }
 ```

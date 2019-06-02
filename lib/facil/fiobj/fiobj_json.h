@@ -6,10 +6,10 @@ Copyright: Boaz Segev, 2017-2019
 License: MIT
 */
 
-#include <fiobj_ary.h>
+#include <fiobj_array.h>
 #include <fiobj_hash.h>
 #include <fiobj_numbers.h>
-#include <fiobj_str.h>
+#include <fiobj_string.h>
 #include <fiobject.h>
 
 #ifdef __cplusplus

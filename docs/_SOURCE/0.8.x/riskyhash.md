@@ -210,7 +210,7 @@ License: MIT
   (((uint64_t)(i) << ((bits)&63UL)) | ((uint64_t)(i) >> ((-(bits)) & 63UL)))
 
 /** Converts an unaligned network ordered byte stream to a 64 bit number. */
-#define fio_str2u64(c)                                                         \
+#define fio_string2u64(c)                                                         \
   ((uint64_t)((((uint64_t)((uint8_t *)(c))[0]) << 56) |                        \
               (((uint64_t)((uint8_t *)(c))[1]) << 48) |                        \
               (((uint64_t)((uint8_t *)(c))[2]) << 40) |                        \
@@ -251,21 +251,21 @@ uint64_t fio_risky_hash(const void *data_, size_t len,
 
   /* consume 256 bit blocks */
   for (size_t i = len >> 5; i; --i) {
-    fio_risky_consume(v0, fio_str2u64(data));
-    fio_risky_consume(v1, fio_str2u64(data + 8));
-    fio_risky_consume(v2, fio_str2u64(data + 16));
-    fio_risky_consume(v3, fio_str2u64(data + 24));
+    fio_risky_consume(v0, fio_string2u64(data));
+    fio_risky_consume(v1, fio_string2u64(data + 8));
+    fio_risky_consume(v2, fio_string2u64(data + 16));
+    fio_risky_consume(v3, fio_string2u64(data + 24));
     data += 32;
   }
 
   /* Consume any remaining 64 bit words. */
   switch (len & 24) {
   case 24:
-    fio_risky_consume(v2, fio_str2u64(data + 16));
+    fio_risky_consume(v2, fio_string2u64(data + 16));
   case 16: /* overflow */
-    fio_risky_consume(v1, fio_str2u64(data + 8));
+    fio_risky_consume(v1, fio_string2u64(data + 8));
   case 8: /* overflow */
-    fio_risky_consume(v0, fio_str2u64(data));
+    fio_risky_consume(v0, fio_string2u64(data));
     data += len & 24;
   }
 

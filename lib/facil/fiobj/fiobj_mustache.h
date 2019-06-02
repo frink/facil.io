@@ -16,7 +16,7 @@ License: MIT
  *
  * The `filename` argument should contain the template's file name.
  */
-mustache_s *fiobj_mustache_load(fio_str_info_s filename);
+mustache_s *fiobj_mustache_load(fio_string_info_s filename);
 
 /**
  * Loads a mustache template, either from memory of a file, converting it into

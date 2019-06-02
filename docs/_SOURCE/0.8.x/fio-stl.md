@@ -24,17 +24,17 @@ The core library includes a Simple Template Library for common types, such as:
 
 * [Linked Lists](#linked-lists) - defined by `FIO_LIST_NAME`
 
-* [Dynamic Arrays](#dynamic-arrays) - defined by `FIO_ARY_NAME`
+* [Dynamic Arrays](#dynamic-arrays) - defined by `FIO_ARRAY_NAME`
 
 * Hash Maps / Sets - defined by `FIO_MAP_NAME`
 
-* Binary Safe Dynamic Strings - defined by `FIO_STR_NAME`
+* Binary Safe Dynamic Strings - defined by `FIO_STRING_NAME`
 
-* Reference counting / Type wrapper - defined by `FIO_REF_NAME`
+* Reference counting / Type wrapper - defined by `FIO_REFERENCE_NAME`
 
 In addition, the core library includes helpers for common tasks, such as:
 
-* Pointer Tagging - defined by `FIO_PTR_TAG(p)`/`FIO_PTR_UNTAG(p)`
+* Pointer Tagging - defined by `FIO_POINTER_TAG(p)`/`FIO_POINTER_UNTAG(p)`
 
 * Logging and Assertion (without heap allocation) - defined by `FIO_LOG`
 
@@ -237,12 +237,12 @@ _Note: macro, name unchanged, works for all lists_
 
 ```c
 #define FIO_LIST_EACH(type, node_name, head, pos)                              \
-  for (type *pos = FIO_PTR_FROM_FIELD(type, node_name, (head)->next),          \
+  for (type *pos = FIO_POINTER_FROM_FIELD(type, node_name, (head)->next),          \
             *next____p_ls =                                                    \
-                FIO_PTR_FROM_FIELD(type, node_name, (head)->next->next);       \
-       pos != FIO_PTR_FROM_FIELD(type, node_name, (head));                     \
+                FIO_POINTER_FROM_FIELD(type, node_name, (head)->next->next);       \
+       pos != FIO_POINTER_FROM_FIELD(type, node_name, (head));                     \
        (pos = next____p_ls),                                                   \
-            (next____p_ls = FIO_PTR_FROM_FIELD(type, node_name,                \
+            (next____p_ls = FIO_POINTER_FROM_FIELD(type, node_name,                \
                                                next____p_ls->node_name.next)))
 ```
 
@@ -289,26 +289,26 @@ A common solution is to reserve a value for "empty" elements and `set` the eleme
 
 ### Dynamic Array Overview
 
-To create a dynamic array type, define the type name using the `FIO_ARY_NAME` macro. i.e.:
+To create a dynamic array type, define the type name using the `FIO_ARRAY_NAME` macro. i.e.:
 
 ```c
-#define FIO_ARY_NAME int_ary
+#define FIO_ARRAY_NAME int_ary
 ```
 
-Next (usually), define the `FIO_ARY_TYPE` macro with the element type. The default element type is `void *`. For example:
+Next (usually), define the `FIO_ARRAY_TYPE` macro with the element type. The default element type is `void *`. For example:
 
 ```c
-#define FIO_ARY_TYPE int
+#define FIO_ARRAY_TYPE int
 ```
 
 For complex types, define any (or all) of the following macros:
 
 ```c
-#define FIO_ARY_TYPE_COPY(dest, src)  // set to adjust element copying 
-#define FIO_ARY_TYPE_DESTROY(obj)     // set for element cleanup 
-#define FIO_ARY_TYPE_CMP(a, b)        // set to adjust element comparison 
-#define FIO_ARY_TYPE_INVALID 0 // to be returned when `index` is out of bounds / holes 
-#define FIO_ARY_TYPE_INVALID_SIMPLE 1 // set ONLY if the invalid element is all zero bytes 
+#define FIO_ARRAY_TYPE_COPY(dest, src)  // set to adjust element copying 
+#define FIO_ARRAY_TYPE_DESTROY(obj)     // set for element cleanup 
+#define FIO_ARRAY_TYPE_COMPARE(a, b)        // set to adjust element comparison 
+#define FIO_ARRAY_TYPE_INVALID 0 // to be returned when `index` is out of bounds / holes 
+#define FIO_ARRAY_TYPE_INVALID_SIMPLE 1 // set ONLY if the invalid element is all zero bytes 
 ```
 
 To create the type and helper functions, include the Simple Template Library header.
@@ -321,15 +321,15 @@ typedef struct {
   float f;
 } foo_s;
 
-#define FIO_ARY_NAME ary
-#define FIO_ARY_TYPE foo_s
-#define FIO_ARY_TYPE_CMP(a,b) (a.i == b.i && a.f == b.f)
+#define FIO_ARRAY_NAME ary
+#define FIO_ARRAY_TYPE foo_s
+#define FIO_ARRAY_TYPE_COMPARE(a,b) (a.i == b.i && a.f == b.f)
 #include "fio_cstl.h"
 
 void example(void) {
-  ary_s a = FIO_ARY_INIT;
+  ary_s a = FIO_ARRAY_INIT;
   foo_s *p = ary_push(&a, (foo_s){.i = 42});
-  FIO_ARY_EACH(&a, pos) { // pos will be a pointer to the element
+  FIO_ARRAY_EACH(&a, pos) { // pos will be a pointer to the element
     fprintf(stderr, "* [%zu]: %p : %d\n", (size_t)(pos - ary_to_a(&a)), pos->i);
   }
   ary_destroy(&a);
@@ -342,19 +342,19 @@ void example(void) {
 
 ```c
 typedef struct {
-  FIO_ARY_TYPE *ary;
+  FIO_ARRAY_TYPE *ary;
   uint32_t capa;
   uint32_t start;
   uint32_t end;
-} FIO_NAME(FIO_ARY_NAME, s); /* ARY_s in these docs */
+} FIO_NAME(FIO_ARRAY_NAME, s); /* ARY_s in these docs */
 ```
 
 The array type should be considered opaque. Use the helper functions to updated the array's state when possible, even though the array's data is easily understood and could be manually adjusted as needed.
 
-#### `FIO_ARY_INIT`
+#### `FIO_ARRAY_INIT`
 
 ````c
-#define FIO_ARY_INIT  {0}
+#define FIO_ARRAY_INIT  {0}
 ````
 
 This macro initializes an uninitialized array object.
@@ -391,10 +391,10 @@ uint32_t ARY_count(ARY_s * ary);
 
 Returns the number of elements in the Array.
 
-#### `ARY_capa`
+#### `ARY_capacity`
 
 ````c
-uint32_t ARY_capa(ARY_s * ary);
+uint32_t ARY_capacity(ARY_s * ary);
 ````
 
 Returns the current, temporary, array capacity (it's dynamic).
@@ -428,10 +428,10 @@ Always returns the destination array (`dest`).
 #### `ARY_set`
 
 ```c
-FIO_ARY_TYPE * ARY_set(ARY_s * ary,
+FIO_ARRAY_TYPE * ARY_set(ARY_s * ary,
                        int32_t index,
-                       FIO_ARY_TYPE data,
-                       FIO_ARY_TYPE *old);
+                       FIO_ARRAY_TYPE data,
+                       FIO_ARRAY_TYPE *old);
 ```
 
 Sets `index` to the value in `data`.
@@ -445,7 +445,7 @@ Returns a pointer to the new object, or NULL on error.
 #### `ARY_get`
 
 ```c
-FIO_ARY_TYPE ARY_get(ARY_s * ary, int32_t index);
+FIO_ARRAY_TYPE ARY_get(ARY_s * ary, int32_t index);
 ```
 
 Returns the value located at `index` (no copying is performed).
@@ -457,7 +457,7 @@ If `index` is negative, it will be counted from the end of the Array (-1 == last
 #### `ARY_find`
 
 ```c
-int32_t ARY_find(ARY_s * ary, FIO_ARY_TYPE data, int32_t start_at);
+int32_t ARY_find(ARY_s * ary, FIO_ARRAY_TYPE data, int32_t start_at);
 ```
 
 Returns the index of the object or -1 if the object wasn't found.
@@ -466,7 +466,7 @@ If `start_at` is negative (i.e., -1), than seeking will be performed in reverse,
 
 #### `ARY_remove`
 ```c
-int ARY_remove(ARY_s * ary, int32_t index, FIO_ARY_TYPE *old);
+int ARY_remove(ARY_s * ary, int32_t index, FIO_ARRAY_TYPE *old);
 ```
 
 Removes an object from the array, MOVING all the other objects to prevent "holes" in the data.
@@ -480,7 +480,7 @@ This action is O(n) where n in the length of the array. It could get expensive.
 #### `ARY_remove2`
 
 ```c
-uint32_t ARY_remove2(ARY_S * ary, FIO_ARY_TYPE data);
+uint32_t ARY_remove2(ARY_S * ary, FIO_ARRAY_TYPE data);
 ```
 
 Removes all occurrences of an object from the array (if any), MOVING all the existing objects to prevent "holes" in the data.
@@ -499,7 +499,7 @@ Attempts to lower the array's memory consumption.
 #### `ARY_to_a`
 
 ```c
-FIO_ARY_TYPE * ARY_to_a(ARY_s * ary);
+FIO_ARRAY_TYPE * ARY_to_a(ARY_s * ary);
 ```
 
 Returns a pointer to the C array containing the objects.
@@ -507,7 +507,7 @@ Returns a pointer to the C array containing the objects.
 #### `ARY_push`
 
 ```c
-FIO_ARY_TYPE * ARY_push(ARY_s * ary, FIO_ARY_TYPE data);
+FIO_ARRAY_TYPE * ARY_push(ARY_s * ary, FIO_ARRAY_TYPE data);
 ```
 
  Pushes an object to the end of the Array. Returns a pointer to the new object or NULL on error.
@@ -515,7 +515,7 @@ FIO_ARY_TYPE * ARY_push(ARY_s * ary, FIO_ARY_TYPE data);
 #### `ARY_pop`
 
 ```c
-int ARY_pop(ARY_s * ary, FIO_ARY_TYPE *old);
+int ARY_pop(ARY_s * ary, FIO_ARRAY_TYPE *old);
 ```
 
 Removes an object from the end of the Array.
@@ -527,7 +527,7 @@ Returns -1 on error (Array is empty) and 0 on success.
 #### `ARY_unshift`
 
 ```c
-FIO_ARY_TYPE *ARY_unshift(ARY_s * ary, FIO_ARY_TYPE data);
+FIO_ARRAY_TYPE *ARY_unshift(ARY_s * ary, FIO_ARRAY_TYPE data);
 ```
 
 Unshifts an object to the beginning of the Array. Returns a pointer to the new object or NULL on error.
@@ -537,7 +537,7 @@ This could be expensive, causing `memmove`.
 #### `ARY_shift`
 
 ```c
-int ARY_shift(ARY_s * ary, FIO_ARY_TYPE *old);
+int ARY_shift(ARY_s * ary, FIO_ARRAY_TYPE *old);
 ```
 
 Removes an object from the beginning of the Array.
@@ -550,7 +550,7 @@ Returns -1 on error (Array is empty) and 0 on success.
 
 ```c
 uint32_t ARY_each(ARY_s * ary, int32_t start_at,
-                               int (*task)(FIO_ARY_TYPE obj, void *arg),
+                               int (*task)(FIO_ARRAY_TYPE obj, void *arg),
                                void *arg);
 ```
 
@@ -562,10 +562,10 @@ If the callback returns -1, the loop is broken. Any other value is ignored.
 
 Returns the relative "stop" position (number of items processed + starting point).
 
-#### `FIO_ARY_EACH`
+#### `FIO_ARRAY_EACH`
 
 ```c
-#define FIO_ARY_EACH(array, pos)                                               \
+#define FIO_ARRAY_EACH(array, pos)                                               \
   if ((array)->ary)                                                            \
     for (__typeof__((array)->ary) start__tmp__ = (array)->ary,                 \
                                   pos = ((array)->ary + (array)->start);       \
@@ -615,12 +615,12 @@ Other helpful macros to define might include:
 - `FIO_MAP_TYPE_INVALID`, which defaults to `((FIO_MAP_TYPE){0})`
 - `FIO_MAP_TYPE_COPY(dest, src)`, which defaults to `(dest) = (src)`
 - `FIO_MAP_TYPE_DESTROY(obj)`
-- `FIO_MAP_TYPE_CMP(a, b)`, which defaults to `1`
+- `FIO_MAP_TYPE_COMPARE(a, b)`, which defaults to `1`
 - `FIO_MAP_KEY`
 - `FIO_MAP_KEY_INVALID`
 - `FIO_MAP_KEY_COPY(dest, src)`
 - `FIO_MAP_KEY_DESTROY(obj)`
-- `FIO_MAP_KEY_CMP(a, b)`
+- `FIO_MAP_KEY_COMPARE(a, b)`
 - `FIO_MAP_MAX_FULL_COLLISIONS`, which defaults to `96`
 
 
@@ -644,7 +644,7 @@ Example:
 #### `MAP_new`
 
 ```c
-FIO_MAP_PTR MAP_new(void);
+FIO_MAP_POINTER MAP_new(void);
 ```
 
 Allocates a new map on the heap.
@@ -652,7 +652,7 @@ Allocates a new map on the heap.
 #### `MAP_free`
 
 ```c
-void MAP_free(MAP_PTR m);
+void MAP_free(MAP_POINTER m);
 ```
 
 Frees a map that was allocated on the heap.
@@ -668,7 +668,7 @@ This macro initializes a map object - often used for maps placed on the stack.
 #### `MAP_destroy`
 
 ```c
-void MAP_destroy(MAP_PTR m);
+void MAP_destroy(MAP_POINTER m);
 ```
 
 Destroys the map's internal data and re-initializes it.
@@ -679,7 +679,7 @@ Destroys the map's internal data and re-initializes it.
 #### `MAP_find` (hash map)
 
 ```c
-FIO_MAP_TYPE MAP_find(FIO_MAP_PTR m,
+FIO_MAP_TYPE MAP_find(FIO_MAP_POINTER m,
                       FIO_MAP_HASH hash,
                       FIO_MAP_KEY key);
 ```
@@ -688,7 +688,7 @@ Returns the object in the hash map (if any) or FIO_MAP_TYPE_INVALID.
 #### `MAP_insert` (hash map)
 
 ```c
-FIO_MAP_TYPE MAP_insert(FIO_MAP_PTR m,
+FIO_MAP_TYPE MAP_insert(FIO_MAP_POINTER m,
                FIO_MAP_HASH hash,
                FIO_MAP_KEY key,
                FIO_MAP_TYPE obj,
@@ -703,7 +703,7 @@ If `old` is given, existing data will be copied to that location.
 #### `MAP_remove` (hash map)
 
 ```c
-int MAP_remove(FIO_MAP_PTR m,
+int MAP_remove(FIO_MAP_POINTER m,
                FIO_MAP_HASH hash,
                FIO_MAP_KEY key,
                FIO_MAP_TYPE *old);
@@ -720,7 +720,7 @@ Returns 0 on success or -1 if the object couldn't be found.
 #### `MAP_find` (set)
 
 ```c
-FIO_MAP_TYPE MAP_find(FIO_MAP_PTR m,
+FIO_MAP_TYPE MAP_find(FIO_MAP_POINTER m,
                        FIO_MAP_HASH hash,
                        FIO_MAP_TYPE obj);
 ```
@@ -730,7 +730,7 @@ Returns the object in the hash map (if any) or `FIO_MAP_TYPE_INVALID`.
 #### `MAP_insert` (set)
 
 ```c
-FIO_MAP_TYPE MAP_insert(FIO_MAP_PTR m,
+FIO_MAP_TYPE MAP_insert(FIO_MAP_POINTER m,
                          FIO_MAP_HASH hash,
                          FIO_MAP_TYPE obj);
 ```
@@ -742,7 +742,7 @@ If `old` is given, existing data will be copied to that location.
 #### `MAP_overwrite` (set)
 
 ```c
-void MAP_overwrite(FIO_MAP_PTR m,
+void MAP_overwrite(FIO_MAP_POINTER m,
                     FIO_MAP_HASH hash,
                     FIO_MAP_TYPE obj,
                     FIO_MAP_TYPE *old);
@@ -756,7 +756,7 @@ If `old` is given, existing data will be copied to that location.
 #### `MAP_remove` (set)
 
 ```c
-int MAP_remove(FIO_MAP_PTR m, FIO_MAP_HASH hash,
+int MAP_remove(FIO_MAP_POINTER m, FIO_MAP_HASH hash,
                FIO_MAP_TYPE obj, FIO_MAP_TYPE *old);
 ```
 
@@ -771,15 +771,15 @@ Returns 0 on success or -1 if the object couldn't be found.
 #### `MAP_count`
 
 ```c
-uintptr_t MAP_count(FIO_MAP_PTR m);
+uintptr_t MAP_count(FIO_MAP_POINTER m);
 ```
 
 Returns the number of objects in the map.
 
-#### `MAP_capa`
+#### `MAP_capacity`
 
 ```c
-uintptr_t MAP_capa(FIO_MAP_PTR m);
+uintptr_t MAP_capacity(FIO_MAP_POINTER m);
 ```
 
 Returns the current map's theoretical capacity.
@@ -787,7 +787,7 @@ Returns the current map's theoretical capacity.
 #### `MAP_reserve`
 
 ```c
-uintptr_t MAP_reserve(FIO_MAP_PTR m, uint32_t capa);
+uintptr_t MAP_reserve(FIO_MAP_POINTER m, uint32_t capa);
 ```
 
 Reserves a minimal capacity for the hash map.
@@ -795,7 +795,7 @@ Reserves a minimal capacity for the hash map.
 #### `MAP_last`
 
 ```c
-FIO_MAP_TYPE MAP_last(FIO_MAP_PTR m);
+FIO_MAP_TYPE MAP_last(FIO_MAP_POINTER m);
 ```
 
 Allows a peak at the Set's last element.
@@ -805,7 +805,7 @@ Remember that objects might be destroyed if the Set is altered (`FIO_MAP_TYPE_DE
 #### `MAP_pop`
 
 ```c
-void MAP_pop(FIO_MAP_PTR m);
+void MAP_pop(FIO_MAP_POINTER m);
 ```
 
 Allows the Hash to be momentarily used as a stack, destroying the last object added (`FIO_MAP_TYPE_DESTROY` / `FIO_MAP_KEY_DESTROY`).
@@ -813,7 +813,7 @@ Allows the Hash to be momentarily used as a stack, destroying the last object ad
 #### `MAP_compact`
 
 ```c
-void MAP_compact(FIO_MAP_PTR m);
+void MAP_compact(FIO_MAP_POINTER m);
 ```
 
 Attempts to lower the map's memory consumption.
@@ -821,7 +821,7 @@ Attempts to lower the map's memory consumption.
 #### `MAP_rehash`
 
 ```c
-int MAP_rehash(FIO_MAP_PTR m);
+int MAP_rehash(FIO_MAP_POINTER m);
 ```
 
 Rehashes the Hash Map / Set. Usually this is performed automatically, no need to call the function.
@@ -829,7 +829,7 @@ Rehashes the Hash Map / Set. Usually this is performed automatically, no need to
 #### `MAP_each`
 
 ```c
-uint32_t FIO_NAME(FIO_MAP_NAME, each)(FIO_MAP_PTR m,
+uint32_t FIO_NAME(FIO_MAP_NAME, each)(FIO_MAP_POINTER m,
                                       int32_t start_at,
                                       int (*task)(FIO_MAP_TYPE obj, void *arg),
                                       void *arg);
@@ -882,10 +882,10 @@ _Note: this macro doesn't work with pointer tagging_.
 
 ## Dynamic Strings
 
-To create a dynamic string type, define the type name using the `FIO_STR_NAME`
+To create a dynamic string type, define the type name using the `FIO_STRING_NAME`
 macro.
 
-The type (`FIO_STR_NAME_s`) and the functions will be automatically defined.
+The type (`FIO_STRING_NAME_s`) and the functions will be automatically defined.
 
 For the full list of functions see: Dynamic Strings
 
@@ -893,38 +893,38 @@ For the full list of functions see: Dynamic Strings
 
 #### `STR_s`
 
-The core type, created by the macro, is the `STR_s` type - where `STR` is replaced by `FIO_STR_NAME`. i.e.:
+The core type, created by the macro, is the `STR_s` type - where `STR` is replaced by `FIO_STRING_NAME`. i.e.:
 
 ```c
-#define FIO_STR_NAME my_str
+#define FIO_STRING_NAME my_string
 #include <fio-stl.h>
-// results in: my_str_s - i.e.:
+// results in: my_string_s - i.e.:
 void hello(void){
-  my_str_s msg = FIO_STR_INIT;
-  my_str_write(&msg, "Hello World", 11);
-  printf("%s\n", my_str_data(&msg));
-  my_str_destroy(&msg);
+  my_string_s msg = FIO_STRING_INIT;
+  my_string_write(&msg, "Hello World", 11);
+  printf("%s\n", my_string_data(&msg));
+  my_string_destroy(&msg);
 }
 ```
 
 The type should be considered **opaque** and **must never be accessed directly**.
 
-The type's attributes should be accessed ONLY through the accessor functions: `STR_info`, `STR_len`, `STR_data`, `STR_capa`, etc'.
+The type's attributes should be accessed ONLY through the accessor functions: `STR_info`, `STR_length`, `STR_data`, `STR_capacity`, etc'.
 
 This is because: Small strings that fit into the type directly use the type itself for memory (except the first and last bytes). Larger strings use the type fields for the string's meta-data. Depending on the string's data, the type behaves differently.
 
-#### `fio_str_info_s`
+#### `fio_string_info_s`
 
-Some functions return information about a string's state using the `fio_str_info_s` type.
+Some functions return information about a string's state using the `fio_string_info_s` type.
 
 This helper type is defined like so:
 
 ```c
-typedef struct fio_str_info_s {
+typedef struct fio_string_info_s {
   size_t capa; /* String capacity, if the string is writable. */
   size_t len;  /* String length, if any. */
   char *data;  /* Pointer to the string's first byte, if the string is valid . */
-} fio_str_info_s;
+} fio_string_info_s;
 ```
 
 This information type, accessible using the `STR_info` function, allows direct access and manipulation of the string data.
@@ -933,55 +933,55 @@ Changes in string length should be followed by a call to `STR_resize`.
 
 The data in the string object is always NUL terminated. However, string data might contain binary data, where NUL is a valid character, so using C string functions isn't advised.
 
-#### String allocation alignment / `FIO_STR_NO_ALIGN`
+#### String allocation alignment / `FIO_STRING_NO_ALIGN`
 
 Memory allocators have allocation alignment concerns that require minimum space to be allocated.
 
 The default `STR_s` type makes use of this extra space for small strings, fitting them into the type.
 
-To prevent this behavior and minimize the space used by the `STR_s` type, set the `FIO_STR_NO_ALIGN` macro to `1`.
+To prevent this behavior and minimize the space used by the `STR_s` type, set the `FIO_STRING_NO_ALIGN` macro to `1`.
 
 ```c
-#define FIO_STR_NAME big_string
-#define FIO_STR_NO_ALIGN 1
+#define FIO_STRING_NAME big_string
+#define FIO_STRING_NO_ALIGN 1
 #include <fio-stl.h>
 // ...
-big_string_s foo = FIO_STR_INIT;
+big_string_s foo = FIO_STRING_INIT;
 ```
 
 This could save memory when strings aren't short enough to be contained within the type.
 
-This could also save memory, potentially, if the string type will be wrapped / embedded within other data-types (i.e., using `FIO_REF_NAME` for reference counting).
+This could also save memory, potentially, if the string type will be wrapped / embedded within other data-types (i.e., using `FIO_REFERENCE_NAME` for reference counting).
 
 ### String API - Initialization and Destruction
 
-#### `FIO_STR_INIT`
+#### `FIO_STRING_INIT`
 
 This value should be used for initialization. It should be considered opaque, but is defined as:
 
 ```c
-#define FIO_STR_INIT { .special = 1 }
+#define FIO_STRING_INIT { .special = 1 }
 ```
 
 For example:
 
 ```c
-#define FIO_STR_NAME fio_str
+#define FIO_STRING_NAME fio_str
 #include <fio-stl.h>
 void example(void) {
   // on the stack
-  fio_str_s str = FIO_STR_INIT;
+  fio_string_s str = FIO_STRING_INIT;
   // .. 
-  fio_str_destroy(&str);
+  fio_string_destroy(&str);
 }
 ```
 
-#### `FIO_STR_INIT_EXISTING`
+#### `FIO_STRING_INIT_EXISTING`
 
 This macro allows the container to be initialized with existing data.
 
 ```c
-#define FIO_STR_INIT_EXISTING(buffer, length, capacity, dealloc_)              \
+#define FIO_STRING_INIT_EXISTING(buffer, length, capacity, dealloc_)              \
   {                                                                            \
     .data = (buffer), .len = (length), .capa = (capacity),                     \
     .dealloc = (dealloc_)                                                      \
@@ -991,28 +991,28 @@ The `capacity` value should exclude the space required for the NUL character (if
 
 `dealloc` should be a function pointer to a memory deallocation function, such as `free`, `fio_free` or `NULL` (doesn't deallocate the memory).
 
-#### `FIO_STR_INIT_STATIC`
+#### `FIO_STRING_INIT_STATIC`
 
 This macro allows the string container to be initialized with existing static data, that shouldn't be freed.
 
 ```c
-#define FIO_STR_INIT_STATIC(buffer)                                            \
+#define FIO_STRING_INIT_STATIC(buffer)                                            \
   { .data = (char *)(buffer), .len = strlen((buffer)), .dealloc = NULL }
 ```
 
-#### `FIO_STR_INIT_STATIC2`
+#### `FIO_STRING_INIT_STATIC2`
 
 This macro allows the string container to be initialized with existing static data, that shouldn't be freed.
 
 ```c
-#define FIO_STR_INIT_STATIC2(buffer, length)                                   \
+#define FIO_STRING_INIT_STATIC2(buffer, length)                                   \
   { .data = (char *)(buffer), .len = (length), .dealloc = NULL }
 ```
 
 #### `STR_destroy`
 
 ```c
-void STR_destroy(FIO_STR_PTR s);
+void STR_destroy(FIO_STRING_POINTER s);
 ```
 
 Frees the String's resources and reinitializes the container.
@@ -1022,7 +1022,7 @@ Note: if the container isn't allocated on the stack, it should be freed separate
 #### `STR_new`
 
 ```c
-FIO_STR_PTR STR_new(void);
+FIO_STRING_POINTER STR_new(void);
 ```
 
 Allocates a new String object on the heap.
@@ -1030,7 +1030,7 @@ Allocates a new String object on the heap.
 #### `STR_free`
 
 ```c
-void STR_free(FIO_STR_PTR s);
+void STR_free(FIO_STRING_POINTER s);
 ```
 
 Destroys the string and frees the container (if allocated with `STR_new`).
@@ -1038,7 +1038,7 @@ Destroys the string and frees the container (if allocated with `STR_new`).
 #### `STR_detach`
 
 ```c
-char * STR_detach(FIO_STR_PTR s);
+char * STR_detach(FIO_STRING_POINTER s);
 ```
 
 Returns a C string with the existing data, **re-initializing** the String.
@@ -1052,15 +1052,15 @@ Returns NULL if there's no String data.
 #### `STR_info`
 
 ```c
-fio_str_info_s STR_info(const FIO_STR_PTR s);
+fio_string_info_s STR_info(const FIO_STRING_POINTER s);
 ```
 
 Returns the String's complete state (capacity, length and pointer). 
 
-#### `STR_len`
+#### `STR_length`
 
 ```c
-size_t STR_len(FIO_STR_PTR s);
+size_t STR_length(FIO_STRING_POINTER s);
 ```
 
 Returns the String's length in bytes.
@@ -1068,15 +1068,15 @@ Returns the String's length in bytes.
 #### `STR_data`
 
 ```c
-char *STR_data(FIO_STR_PTR s);
+char *STR_data(FIO_STRING_POINTER s);
 ```
 
 Returns a pointer (`char *`) to the String's content.
 
-#### `STR_capa`
+#### `STR_capacity`
 
 ```c
-size_t STR_capa(FIO_STR_PTR s);
+size_t STR_capacity(FIO_STRING_POINTER s);
 ```
 
 Returns the String's existing capacity (total used & available memory).
@@ -1084,7 +1084,7 @@ Returns the String's existing capacity (total used & available memory).
 #### `STR_freeze`
 
 ```c
-void STR_freeze(FIO_STR_PTR s);
+void STR_freeze(FIO_STRING_POINTER s);
 ```
 
 Prevents further manipulations to the String's content.
@@ -1092,7 +1092,7 @@ Prevents further manipulations to the String's content.
 #### `STR_is_frozen`
 
 ```c
-uint8_t STR_is_frozen(FIO_STR_PTR s);
+uint8_t STR_is_frozen(FIO_STRING_POINTER s);
 ```
 
 Returns true if the string is frozen.
@@ -1100,7 +1100,7 @@ Returns true if the string is frozen.
 #### `STR_iseq`
 
 ```c
-int STR_iseq(const FIO_STR_PTR str1, const FIO_STR_PTR str2);
+int STR_iseq(const FIO_STRING_POINTER str1, const FIO_STRING_POINTER str2);
 ```
 
 Binary comparison returns `1` if both strings are equal and `0` if not.
@@ -1108,7 +1108,7 @@ Binary comparison returns `1` if both strings are equal and `0` if not.
 #### `STR_hash`
 
 ```c
-uint64_t STR_hash(const FIO_STR_PTR s);
+uint64_t STR_hash(const FIO_STRING_POINTER s);
 ```
 
 Returns the string's Risky Hash value.
@@ -1120,7 +1120,7 @@ Note: Hash algorithm might change without notice.
 #### `STR_resize`
 
 ```c
-fio_str_info_s STR_resize(FIO_STR_PTR s, size_t size);
+fio_string_info_s STR_resize(FIO_STRING_POINTER s, size_t size);
 ```
 
 Sets the new String size without reallocating any memory (limited by existing capacity).
@@ -1132,7 +1132,7 @@ Note: When shrinking, any existing data beyond the new size may be corrupted or 
 #### `STR_compact`
 
 ```c
-void STR_compact(FIO_STR_PTR s);
+void STR_compact(FIO_STRING_POINTER s);
 ```
 
 Performs a best attempt at minimizing memory consumption.
@@ -1142,7 +1142,7 @@ Actual effects depend on the underlying memory allocator and it's implementation
 #### `STR_reserve`
 
 ```c
-fio_str_info_s STR_reserve(FIO_STR_PTR s, size_t amount);
+fio_string_info_s STR_reserve(FIO_STRING_POINTER s, size_t amount);
 ```
 
 Reserves at least `amount` of bytes for the string's data (reserved count includes used data).
@@ -1154,15 +1154,15 @@ Returns the current state of the String.
 #### `STR_utf8_valid`
 
 ```c
-size_t STR_utf8_valid(FIO_STR_PTR s);
+size_t STR_utf8_valid(FIO_STRING_POINTER s);
 ```
 
 Returns 1 if the String is UTF-8 valid and 0 if not.
 
-#### `STR_utf8_len`
+#### `STR_utf8_length`
 
 ```c
-size_t STR_utf8_len(FIO_STR_PTR s);
+size_t STR_utf8_length(FIO_STRING_POINTER s);
 ```
 
 Returns the String's length in UTF-8 characters.
@@ -1170,7 +1170,7 @@ Returns the String's length in UTF-8 characters.
 #### `STR_utf8_select`
 
 ```c
-int STR_utf8_select(FIO_STR_PTR s, intptr_t *pos, size_t *len);
+int STR_utf8_select(FIO_STRING_POINTER s, intptr_t *pos, size_t *len);
 ```
 
 Takes a UTF-8 character selection information (UTF-8 position and length) and updates the same variables so they reference the raw byte slice information.
@@ -1186,7 +1186,7 @@ Returns -1 on error and 0 on success.
 #### `STR_write`
 
 ```c
-fio_str_info_s STR_write(FIO_STR_PTR s, const void *src, size_t src_len);
+fio_string_info_s STR_write(FIO_STRING_POINTER s, const void *src, size_t src_len);
 ```
 
 Writes data at the end of the String.
@@ -1194,7 +1194,7 @@ Writes data at the end of the String.
 #### `STR_write_i`
 
 ```c
-fio_str_info_s STR_write_i(FIO_STR_PTR s, int64_t num);
+fio_string_info_s STR_write_i(FIO_STRING_POINTER s, int64_t num);
 ```
 
 Writes a number at the end of the String using normal base 10 notation.
@@ -1202,7 +1202,7 @@ Writes a number at the end of the String using normal base 10 notation.
 #### `STR_concat` / `STR_join`
 
 ```c
-fio_str_info_s STR_concat(FIO_STR_PTR dest, FIO_STR_PTR const src);
+fio_string_info_s STR_concat(FIO_STRING_POINTER dest, FIO_STRING_POINTER const src);
 ```
 
 Appends the `src` String to the end of the `dest` String. If `dest` is empty, the resulting Strings will be equal.
@@ -1213,7 +1213,7 @@ Appends the `src` String to the end of the `dest` String. If `dest` is empty, th
 #### `STR_replace`
 
 ```c
-fio_str_info_s STR_replace(FIO_STR_PTR s,
+fio_string_info_s STR_replace(FIO_STRING_POINTER s,
                            intptr_t start_pos,
                            size_t old_len,
                            const void *src,
@@ -1231,7 +1231,7 @@ If `src_len == 0` than `src` will be ignored and the data marked for replacement
 #### `STR_vprintf`
 
 ```c
-fio_str_info_s STR_vprintf(FIO_STR_PTR s, const char *format, va_list argv);
+fio_string_info_s STR_vprintf(FIO_STRING_POINTER s, const char *format, va_list argv);
 ```
 
 Writes to the String using a vprintf like interface.
@@ -1241,7 +1241,7 @@ Data is written to the end of the String.
 #### `STR_printf`
 
 ```c
-fio_str_info_s STR_printf(FIO_STR_PTR s, const char *format, ...);
+fio_string_info_s STR_printf(FIO_STRING_POINTER s, const char *format, ...);
 ```
 
 Writes to the String using a printf like interface.
@@ -1251,7 +1251,7 @@ Data is written to the end of the String.
 #### `STR_readfile`
 
 ```c
-fio_str_info_s STR_readfile(FIO_STR_PTR s,
+fio_string_info_s STR_readfile(FIO_STRING_POINTER s,
                             const char *filename,
                             intptr_t start_at,
                             intptr_t limit);
@@ -1268,7 +1268,7 @@ Works on POSIX systems only.
 #### `STR_write_b64enc`
 
 ```c
-fio_str_info_s STR_write_b64enc(FIO_STR_PTR s,
+fio_string_info_s STR_write_b64enc(FIO_STRING_POINTER s,
                                 const void *data,
                                 size_t data_len,
                                 uint8_t url_encoded);
@@ -1279,7 +1279,7 @@ Writes data at the end of the String, encoding the data as Base64 encoded data.
 #### `STR_write_b64dec`
 
 ```c
-fio_str_info_s STR_write_b64dec(FIO_STR_PTR s,
+fio_string_info_s STR_write_b64dec(FIO_STRING_POINTER s,
                                 const void *encoded,
                                 size_t encoded_len);
 ```
@@ -1290,46 +1290,46 @@ Writes decoded Base64 data to the end of the String.
 
 ## Reference Counting / Type Wrapping
 
-If the `FIO_REF_NAME` macro is defined, then referece counting helpers can be
+If the `FIO_REFERENCE_NAME` macro is defined, then referece counting helpers can be
 defined for any named type.
 
-By default, `FIO_REF_TYPE` will equal `FIO_REF_NAME_s`, using the naming
+By default, `FIO_REFERENCE_TYPE` will equal `FIO_REFERENCE_NAME_s`, using the naming
 convention in this library.
 
-In addition, the `FIO_REF_METADATA` macro can be defined with any type, allowing
+In addition, the `FIO_REFERENCE_METADATA` macro can be defined with any type, allowing
 metadata to be attached and accessed using the helper function
-`FIO_REF_metadata(object)`.
+`FIO_REFERENCE_metadata(object)`.
 
 Note: requires the atomic operations to be defined (`FIO_ATOMIC`).
 
 Reference counting adds the following functions:
 
-#### `FIO_REF_TYPE * FIO_REF_NAME_new2(void)`
+#### `FIO_REFERENCE_TYPE * FIO_REFERENCE_NAME_new2(void)`
 
 Allocates a new reference counted object, initializing it using the
-`FIO_REF_INIT(object)` macro.
+`FIO_REFERENCE_INIT(object)` macro.
 
-If `FIO_REF_METADATA` is defined, than the metadata is initialized using the
-`FIO_REF_METADATA_INIT(metadata)` macro.
+If `FIO_REFERENCE_METADATA` is defined, than the metadata is initialized using the
+`FIO_REFERENCE_METADATA_INIT(metadata)` macro.
 
-#### `FIO_REF_TYPE * FIO_REF_NAME_up_ref(FIO_REF_TYPE * object)`
+#### `FIO_REFERENCE_TYPE * FIO_REFERENCE_NAME_up_ref(FIO_REFERENCE_TYPE * object)`
 
 Increases an object's reference count (an atomic operation, thread-safe).
 
-#### `FIO_REF_NAME_free2(FIO_REF_TYPE * object)`
+#### `FIO_REFERENCE_NAME_free2(FIO_REFERENCE_TYPE * object)`
 
 Frees an object or decreases it's reference count (an atomic operation,
 thread-safe).
 
-Before the object is freed, the `FIO_REF_DESTROY(object)` macro will be called.
+Before the object is freed, the `FIO_REFERENCE_DESTROY(object)` macro will be called.
 
-If `FIO_REF_METADATA` is defined, than the metadata is also destroyed using the
-`FIO_REF_METADATA_DESTROY(metadata)` macro.
+If `FIO_REFERENCE_METADATA` is defined, than the metadata is also destroyed using the
+`FIO_REFERENCE_METADATA_DESTROY(metadata)` macro.
 
 
-#### `FIO_REF_METADATA * FIO_REF_NAME_metadata(FIO_REF_TYPE * object)`
+#### `FIO_REFERENCE_METADATA * FIO_REFERENCE_NAME_metadata(FIO_REFERENCE_TYPE * object)`
 
-If `FIO_REF_METADATA` is defined, than the metadata is accessible using this
+If `FIO_REFERENCE_METADATA` is defined, than the metadata is accessible using this
 inlined function.
 
 -------------------------------------------------------------------------------
@@ -1342,23 +1342,23 @@ This is when creating / managing dynamic types, where some type data could be wr
 
 **Note**: pointer tagging can't automatically tag "pointers" to objects placed on the stack.
 
-#### `FIO_PTR_TAG`
+#### `FIO_POINTER_TAG`
 
 Supports embedded pointer tagging / untagging for the included types.
 
 Should resolve to a tagged pointer value. i.e.: `((uintptr_t)(p) | 1)`
 
-#### `FIO_PTR_UNTAG`
+#### `FIO_POINTER_UNTAG`
 
 Supports embedded pointer tagging / untagging for the included types.
 
 Should resolve to an untagged pointer value. i.e.: `((uintptr_t)(p) | ~1UL)`
 
-**Note**: `FIO_PTR_UNTAG` might be called more then once or on untagged pointers. For this reason, `FIO_PTR_UNTAG` should always return the valid pointer, even if called on an untagged pointer.
+**Note**: `FIO_POINTER_UNTAG` might be called more then once or on untagged pointers. For this reason, `FIO_POINTER_UNTAG` should always return the valid pointer, even if called on an untagged pointer.
 
-#### `FIO_PTR_TAG_TYPE`
+#### `FIO_POINTER_TAG_TYPE`
 
-If the FIO_PTR_TAG_TYPE is defined, then functions returning a type's pointer will return a pointer of the specified type instead.
+If the FIO_POINTER_TAG_TYPE is defined, then functions returning a type's pointer will return a pointer of the specified type instead.
 
 -------------------------------------------------------------------------------
 

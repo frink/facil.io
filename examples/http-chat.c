@@ -125,7 +125,7 @@ static void sse_on_close(http_sse_s *sse);
 
 /* WebSocket Handlers */
 static void ws_on_open(ws_s *ws);
-static void ws_on_message(ws_s *ws, fio_str_info_s msg, uint8_t is_text);
+static void ws_on_message(ws_s *ws, fio_string_info_s msg, uint8_t is_text);
 static void ws_on_shutdown(ws_s *ws);
 static void ws_on_close(intptr_t uuid, void *udata);
 
@@ -134,10 +134,10 @@ static void on_http_upgrade(http_s *h, char *requested_protocol, size_t len) {
   /* Upgrade to SSE or WebSockets and set the request path as a nickname. */
   FIOBJ nickname;
   if (fiobj_obj2cstr(h->path).len > 1) {
-    nickname = fiobj_str_new(fiobj_obj2cstr(h->path).data + 1,
+    nickname = fiobj_string_new(fiobj_obj2cstr(h->path).data + 1,
                              fiobj_obj2cstr(h->path).len - 1);
   } else {
-    nickname = fiobj_str_new("Guest", 5);
+    nickname = fiobj_string_new("Guest", 5);
   }
   /* Test for upgrade protocol (websocket vs. sse) */
   if (len == 3 && requested_protocol[1] == 's') {
@@ -167,7 +167,7 @@ static void on_http_upgrade(http_s *h, char *requested_protocol, size_t len) {
 Globals
 ***************************************************************************** */
 
-static fio_str_info_s CHAT_CANNEL = {.data = "chat", .len = 4};
+static fio_string_info_s CHAT_CANNEL = {.data = "chat", .len = 4};
 
 /* *****************************************************************************
 HTTP SSE (Server Sent Events) Callbacks
@@ -183,15 +183,15 @@ static void sse_on_open(http_sse_s *sse) {
                                .len = 65});
   http_sse_subscribe(sse, .channel = CHAT_CANNEL);
   http_sse_set_timout(sse, fio_cli_get_i("-ping"));
-  FIOBJ tmp = fiobj_str_copy((FIOBJ)sse->udata);
-  fiobj_str_write(tmp, " joind the chat only to listen.", 31);
+  FIOBJ tmp = fiobj_string_copy((FIOBJ)sse->udata);
+  fiobj_string_write(tmp, " joind the chat only to listen.", 31);
   fio_publish(.channel = CHAT_CANNEL, .message = fiobj_obj2cstr(tmp));
   fiobj_free(tmp);
 }
 
 static void sse_on_close(http_sse_s *sse) {
   /* Let everyone know we left the chat */
-  fiobj_str_write((FIOBJ)sse->udata, " left the chat.", 15);
+  fiobj_string_write((FIOBJ)sse->udata, " left the chat.", 15);
   fio_publish(.channel = CHAT_CANNEL,
               .message = fiobj_obj2cstr((FIOBJ)sse->udata));
   /* free the nickname */
@@ -202,11 +202,11 @@ static void sse_on_close(http_sse_s *sse) {
 WebSockets Callbacks
 ***************************************************************************** */
 
-static void ws_on_message(ws_s *ws, fio_str_info_s msg, uint8_t is_text) {
+static void ws_on_message(ws_s *ws, fio_string_info_s msg, uint8_t is_text) {
   // Add the Nickname to the message
-  FIOBJ str = fiobj_str_copy((FIOBJ)websocket_udata_get(ws));
-  fiobj_str_write(str, ": ", 2);
-  fiobj_str_write(str, msg.data, msg.len);
+  FIOBJ str = fiobj_string_copy((FIOBJ)websocket_udata_get(ws));
+  fiobj_string_write(str, ": ", 2);
+  fiobj_string_write(str, msg.data, msg.len);
   // publish
   fio_publish(.channel = CHAT_CANNEL, .message = fiobj_obj2cstr(str));
   // free the string
@@ -217,21 +217,21 @@ static void ws_on_message(ws_s *ws, fio_str_info_s msg, uint8_t is_text) {
 static void ws_on_open(ws_s *ws) {
   websocket_subscribe(ws, .channel = CHAT_CANNEL);
   websocket_write(
-      ws, (fio_str_info_s){.data = "Welcome to the chat-room.", .len = 25}, 1);
-  FIOBJ tmp = fiobj_str_copy((FIOBJ)websocket_udata_get(ws));
-  fiobj_str_write(tmp, " joind the chat.", 16);
+      ws, (fio_string_info_s){.data = "Welcome to the chat-room.", .len = 25}, 1);
+  FIOBJ tmp = fiobj_string_copy((FIOBJ)websocket_udata_get(ws));
+  fiobj_string_write(tmp, " joind the chat.", 16);
   fio_publish(.channel = CHAT_CANNEL, .message = fiobj_obj2cstr(tmp));
   fiobj_free(tmp);
 }
 static void ws_on_shutdown(ws_s *ws) {
   websocket_write(
-      ws, (fio_str_info_s){.data = "Server shutting down, goodbye.", .len = 30},
+      ws, (fio_string_info_s){.data = "Server shutting down, goodbye.", .len = 30},
       1);
 }
 
 static void ws_on_close(intptr_t uuid, void *udata) {
   /* Let everyone know we left the chat */
-  fiobj_str_write((FIOBJ)udata, " left the chat.", 15);
+  fiobj_string_write((FIOBJ)udata, " left the chat.", 15);
   fio_publish(.channel = CHAT_CANNEL, .message = fiobj_obj2cstr((FIOBJ)udata));
   /* free the nickname */
   fiobj_free((FIOBJ)udata);

@@ -27,14 +27,14 @@ Creating the Data Stream object
 ***************************************************************************** */
 
 /** Creates a new local in-memory Data Stream object */
-FIOBJ fiobj_data_newstr(void);
+FIOBJ fiobj_data_new_string(void);
 
 /**
  * Creates a Data object from an existing buffer. The buffer will be deallocated
  * using the provided `dealloc` function pointer. Use a NULL `dealloc` function
  * pointer if the buffer is static and shouldn't be freed.
  */
-FIOBJ fiobj_data_newstr2(void *buffer, uintptr_t length,
+FIOBJ fiobj_data_new_string2(void *buffer, uintptr_t length,
                          void (*dealloc)(void *));
 
 /** Creates a new local tempfile Data Stream object */
@@ -67,7 +67,7 @@ Reading API
  * The C string object will be invalidate the next time a function call to the
  * Data Stream object is made.
  */
-fio_str_info_s fiobj_data_read(FIOBJ io, intptr_t length);
+fio_string_info_s fiobj_data_read(FIOBJ io, intptr_t length);
 
 /**
  * Reads until the `token` byte is encountered or until the end of the stream.
@@ -80,7 +80,7 @@ fio_str_info_s fiobj_data_read(FIOBJ io, intptr_t length);
  * The C string object will be invalidate the next time a function call to the
  * Data Stream object is made.
  */
-fio_str_info_s fiobj_data_read2ch(FIOBJ io, uint8_t token);
+fio_string_info_s fiobj_data_read2ch(FIOBJ io, uint8_t token);
 
 /**
  * Reads a line (until the '\n' byte is encountered) or until the end of the
@@ -105,7 +105,7 @@ intptr_t fiobj_data_pos(FIOBJ io);
 /**
  * Returns the length of the stream.
  */
-intptr_t fiobj_data_len(FIOBJ io);
+intptr_t fiobj_data_length(FIOBJ io);
 
 /**
  * Moves the reading position to the requested position.
@@ -120,7 +120,7 @@ void fiobj_data_seek(FIOBJ io, intptr_t position);
  * The C string object will be invalidate the next time a function call to the
  * Data Stream object is made.
  */
-fio_str_info_s fiobj_data_pread(FIOBJ io, intptr_t start_at, uintptr_t length);
+fio_string_info_s fiobj_data_pread(FIOBJ io, intptr_t start_at, uintptr_t length);
 
 /* *****************************************************************************
 Writing API

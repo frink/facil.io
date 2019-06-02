@@ -17,7 +17,7 @@ By loading the data from a file, or by providing a file name when loading the te
 #### `fiobj_mustache_load`
 
 ```c
-mustache_s *fiobj_mustache_load(fio_str_info_s filename);
+mustache_s *fiobj_mustache_load(fio_string_info_s filename);
 ```
 
 Loads a mustache template from a file, converting it into an opaque instruction array.

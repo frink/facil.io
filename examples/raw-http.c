@@ -30,7 +30,7 @@ Benchmark with higher load:
 /* include the core library, without any extensions */
 #include <fio.h>
 
-/* use the fio_str_s helpers */
+/* use the fio_string_s helpers */
 #define FIO_INCLUDE_STR
 #include <fio.h>
 
@@ -64,7 +64,7 @@ typedef struct {
   size_t header_count; /* the header count - everything after this is garbage */
   char *headers[MAX_HTTP_HEADER_COUNT];
   char *values[MAX_HTTP_HEADER_COUNT];
-  fio_str_s body; /* the HTTP body, this is where a little complexity helps */
+  fio_string_s body; /* the HTTP body, this is where a little complexity helps */
   size_t buf_reader; /* internal: marks the read position in the buffer */
   size_t buf_writer; /* internal: marks the write position in the buffer */
   uint8_t reset; /* used internally to mark when some buffer can be deleted */
@@ -76,8 +76,8 @@ typedef struct {
                     (uintptr_t)(&((light_http_s *)(0))->parser)))
 
 void light_http_send_response(intptr_t uuid, int status,
-                              fio_str_info_s status_str, size_t header_count,
-                              fio_str_info_s headers[][2], fio_str_info_s body);
+                              fio_string_info_s status_string, size_t header_count,
+                              fio_string_info_s headers[][2], fio_string_info_s body);
 /* *****************************************************************************
 The HTTP/1.1 Request Handler - change this to whateve you feel like.
 ***************************************************************************** */
@@ -98,10 +98,10 @@ int on_http_request(light_http_s *http) {
   } else {
     /* an allocated, dynamic, HTTP/1.1 response */
     light_http_send_response(
-        http->uuid, 200, (fio_str_info_s){.len = 2, .data = "OK"}, 1,
-        (fio_str_info_s[][2]){{{.len = 12, .data = "Content-Type"},
+        http->uuid, 200, (fio_string_info_s){.len = 2, .data = "OK"}, 1,
+        (fio_string_info_s[][2]){{{.len = 12, .data = "Content-Type"},
                                {.len = 10, .data = "text/plain"}}},
-        (fio_str_info_s){.len = 13, .data = "Hello Wolrld!"});
+        (fio_string_info_s){.len = 13, .data = "Hello Wolrld!"});
   }
   return 0;
 }
@@ -143,7 +143,7 @@ The HTTP/1.1 Parsing Callbacks - we need to implememnt everything for the parser
 /** called when a request was received. */
 int light_http1_on_request(http1_parser_s *parser) {
   int ret = on_http_request(parser2pr(parser));
-  fio_str_free(&parser2pr(parser)->body);
+  fio_string_free(&parser2pr(parser)->body);
   parser2pr(parser)->reset = 1;
   return ret;
 }
@@ -162,14 +162,14 @@ int light_http1_on_method(http1_parser_s *parser, char *method,
   (void)method_len;
 }
 
-/** called when a response status is parsed. the status_str is the string
+/** called when a response status is parsed. the status_string is the string
  * without the prefixed numerical status indicator.*/
 int light_http1_on_status(http1_parser_s *parser, size_t status,
-                          char *status_str, size_t len) {
+                          char *status_string, size_t len) {
   return -1;
   (void)parser;
   (void)status;
-  (void)status_str;
+  (void)status_string;
   (void)len;
 }
 /** called when a request path (excluding query) is parsed. */
@@ -210,7 +210,7 @@ int light_http1_on_body_chunk(http1_parser_s *parser, char *data,
                               size_t data_len) {
   if (parser->state.content_length >= MAX_HTTP_BODY_MAX)
     return -1;
-  if (fio_str_write(&parser2pr(parser)->body, data, data_len).len >=
+  if (fio_string_write(&parser2pr(parser)->body, data, data_len).len >=
       MAX_HTTP_BODY_MAX)
     return -1;
   return 0;
@@ -247,7 +247,7 @@ void light_http_on_open(intptr_t uuid, void *udata) {
       .protocol.on_data = light_http_on_data,   /* setting the data callback */
       .protocol.on_close = light_http_on_close, /* setting the close callback */
       .uuid = uuid,
-      .body = FIO_STR_INIT,
+      .body = FIO_STRING_INIT,
   };
   /* timeouts are important. timeouts are in seconds. */
   fio_timeout_set(uuid, 5);
@@ -287,7 +287,7 @@ void light_http_on_data(intptr_t uuid, fio_protocol_s *pr) {
                            .on_header = light_http1_on_header,
                            .on_body_chunk = light_http1_on_body_chunk,
                            .on_error = light_http1_on_error);
-    if (fio_str_len(&h->body)) {
+    if (fio_string_length(&h->body)) {
       /* when reading to a body, the data is copied */
       /* keep the reading position at buf_reader. */
       h->buf_writer -= tmp;
@@ -318,7 +318,7 @@ void light_http_on_data(intptr_t uuid, fio_protocol_s *pr) {
 /* this will be called when the connection is closed. */
 void light_http_on_close(intptr_t uuid, fio_protocol_s *pr) {
   /* in case we lost connection midway */
-  fio_str_free(&((light_http_s *)pr)->body);
+  fio_string_free(&((light_http_s *)pr)->body);
   /* free our protocol data and resources */
   free(pr);
   (void)uuid;
@@ -329,26 +329,26 @@ Fast HTTP response handling
 ***************************************************************************** */
 
 void light_http_send_response(intptr_t uuid, int status,
-                              fio_str_info_s status_str, size_t header_count,
-                              fio_str_info_s headers[][2],
-                              fio_str_info_s body) {
+                              fio_string_info_s status_string, size_t header_count,
+                              fio_string_info_s headers[][2],
+                              fio_string_info_s body) {
   static size_t date_len = 0; /* TODO: implement a date header when missing */
 
   size_t total_len = 9 + 4 + 15 + 20 /* max content length */ + 2 +
-                     status_str.len + 2 + date_len + 7 + 2 + body.len;
+                     status_string.len + 2 + date_len + 7 + 2 + body.len;
   for (size_t i = 0; i < header_count; ++i) {
     total_len += headers[i][0].len + 1 + headers[i][1].len + 2;
   }
   if (status < 100 || status > 999)
     status = 500;
-  fio_str_s *response = fio_str_new2();
-  fio_str_capa_assert(response, total_len);
-  fio_str_write(response, "HTTP/1.1 ", 9);
-  fio_str_write_i(response, status);
-  fio_str_write(response, status_str.data, status_str.len);
-  fio_str_write(response, "\r\nContent-Length:", 17);
-  fio_str_write_i(response, body.len);
-  fio_str_write(response, "\r\n", 2);
+  fio_string_s *response = fio_string_new2();
+  fio_string_capacity_assert(response, total_len);
+  fio_string_write(response, "HTTP/1.1 ", 9);
+  fio_string_write_i(response, status);
+  fio_string_write(response, status_string.data, status_string.len);
+  fio_string_write(response, "\r\nContent-Length:", 17);
+  fio_string_write_i(response, body.len);
+  fio_string_write(response, "\r\n", 2);
 
   // memcpy(pos, "Date:", 5);
   // pos += 5;
@@ -357,13 +357,13 @@ void light_http_send_response(intptr_t uuid, int status,
   // *pos++ = '\n';
 
   for (size_t i = 0; i < header_count; ++i) {
-    fio_str_write(response, headers[i][0].data, headers[i][0].len);
-    fio_str_write(response, ":", 1);
-    fio_str_write(response, headers[i][1].data, headers[i][1].len);
-    fio_str_write(response, "\r\n", 2);
+    fio_string_write(response, headers[i][0].data, headers[i][0].len);
+    fio_string_write(response, ":", 1);
+    fio_string_write(response, headers[i][1].data, headers[i][1].len);
+    fio_string_write(response, "\r\n", 2);
   }
-  fio_str_write(response, "\r\n", 2);
+  fio_string_write(response, "\r\n", 2);
   if (body.len && body.data)
-    fio_str_write(response, body.data, body.len);
-  fio_str_send_free2(uuid, response);
+    fio_string_write(response, body.data, body.len);
+  fio_string_send_free2(uuid, response);
 }

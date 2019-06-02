@@ -1,5 +1,5 @@
 
-#define FIO_STR_NAME fio_str
+#define FIO_STRING_NAME fio_string
 #define FIO_CLI 1
 #define FIO_LOG 1
 #include <fio-stl.h>
@@ -558,8 +558,8 @@ int main(int argc, char const **argv) {
   size_t func_pos = 0;
 
   uint8_t char2find = fio_cli_get("-c")[0];
-  fio_str_s str = FIO_STR_INIT;
-  fio_str_info_s data = fio_str_readfile(&str, fio_cli_get("-f"), 0, 0);
+  fio_string_s str = FIO_STRING_INIT;
+  fio_string_info_s data = fio_string_readfile(&str, fio_cli_get("-f"), 0, 0);
   if (!data.len) {
     fprintf(stderr, "ERROR: Couldn't open file %s\n", fio_cli_get("-f"));
     perror("reported error:");
@@ -569,7 +569,7 @@ int main(int argc, char const **argv) {
           (unsigned long)data.len);
   if (0) {
     /* dump to file, if you want to test readfile */
-    fio_str_info_s d = data;
+    fio_string_info_s d = data;
     int f = open("./dump_", O_WRONLY | O_CREAT);
     FIO_ASSERT(f != -1, "no file_");
     while (d.len) {
@@ -617,6 +617,6 @@ int main(int argc, char const **argv) {
   }
   fprintf(stderr, "\n");
 
-  fio_str_destroy(&str);
+  fio_string_destroy(&str);
   fio_cli_end();
 }

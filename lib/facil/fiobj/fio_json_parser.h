@@ -74,7 +74,7 @@ fio_json_parse(json_parser_s *parser, const char *buffer, size_t length);
  * strings.
  */
 static size_t __attribute__((unused))
-fio_json_unescape_str(void *dest, const char *source, size_t length);
+fio_json_unescape_string(void *dest, const char *source, size_t length);
 
 /* *****************************************************************************
 JSON Callacks - these must be implemented in the C file that uses the parser
@@ -546,7 +546,7 @@ static inline int utf8_from_u32(uint8_t *dest, uint32_t u) {
 }
 
 static void __attribute__((unused))
-fio_json_unescape_str_internal(uint8_t **dest, const uint8_t **src) {
+fio_json_unescape_string_internal(uint8_t **dest, const uint8_t **src) {
   ++(*src);
   switch (**src) {
   case 'b':
@@ -635,7 +635,7 @@ fio_json_unescape_str_internal(uint8_t **dest, const uint8_t **src) {
 }
 
 static size_t __attribute__((unused))
-fio_json_unescape_str(void *dest, const char *source, size_t length) {
+fio_json_unescape_string(void *dest, const char *source, size_t length) {
   const uint8_t *reader = (uint8_t *)source;
   const uint8_t *stop = reader + length;
   uint8_t *writer = (uint8_t *)dest;
@@ -676,7 +676,7 @@ fio_json_unescape_str(void *dest, const char *source, size_t length) {
     if (reader >= stop)
       goto finish;
 #endif
-    fio_json_unescape_str_internal(&writer, &reader);
+    fio_json_unescape_string_internal(&writer, &reader);
   }
 finish:
   return (size_t)((uintptr_t)writer - (uintptr_t)dest);

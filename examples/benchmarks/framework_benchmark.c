@@ -60,12 +60,12 @@ int main(int argc, char const *argv[]) {
   route_add("/plaintext", on_request_plain_text);
 
   /* Server name and header */
-  HTTP_HEADER_SERVER = fiobj_str_new("server", 6);
-  HTTP_VALUE_SERVER = fiobj_str_new("facil.io " FIO_VERSION_STRING,
+  HTTP_HEADER_SERVER = fiobj_string_new("server", 6);
+  HTTP_VALUE_SERVER = fiobj_string_new("facil.io " FIO_VERSION_STRING,
                                     strlen("facil.io " FIO_VERSION_STRING));
   /* JSON values to be serialized */
-  JSON_KEY = fiobj_str_new("message", 7);
-  JSON_VALUE = fiobj_str_new("Hello, World!", 13);
+  JSON_KEY = fiobj_string_new("message", 7);
+  JSON_VALUE = fiobj_string_new("Hello, World!", 13);
 
   /* Test for static file service */
   const char *public_folder = fio_cli_get("-www");
@@ -99,7 +99,7 @@ static void on_request_json(http_s *h) {
   fiobj_hash_set(hash, JSON_KEY, fiobj_dup(JSON_VALUE));
   json = fiobj_obj2json(hash, 0);
   fiobj_free(hash);
-  fio_str_info_s tmp = fiobj_obj2cstr(json);
+  fio_string_info_s tmp = fiobj_obj2cstr(json);
   http_send_body(h, tmp.data, tmp.len);
   fiobj_free(json);
 }
@@ -160,12 +160,12 @@ Routing
 typedef void (*fio_router_handler_fn)(http_s *);
 #define FIO_SET_NAME fio_router
 #define FIO_SET_OBJ_TYPE fio_router_handler_fn
-#define FIO_SET_KEY_TYPE fio_str_s
-#define FIO_SET_KEY_COPY(dest, obj) fio_str_concat(&(dest), &(obj))
-#define FIO_SET_KEY_DESTROY(obj) fio_str_free(&(obj))
-#define FIO_SET_KEY_COMPARE(k1, k2) fio_str_iseq(&(k1), &k2)
+#define FIO_SET_KEY_TYPE fio_string_s
+#define FIO_SET_KEY_COPY(dest, obj) fio_string_concat(&(dest), &(obj))
+#define FIO_SET_KEY_DESTROY(obj) fio_string_free(&(obj))
+#define FIO_SET_KEY_COMPARE(k1, k2) fio_string_iseq(&(k1), &k2)
 #define FIO_INCLUDE_STR
-#define FIO_STR_NO_REF
+#define FIO_STRING_NO_REF
 #include <fio.h>
 /* the router is a simple hash map */
 static fio_router_s routes;
@@ -173,9 +173,9 @@ static fio_router_s routes;
 /* adds a route to our simple router */
 static void route_add(char *path, void (*handler)(http_s *)) {
   /* add handler to the hash map */
-  fio_str_s tmp = FIO_STR_INIT_STATIC(path);
+  fio_string_s tmp = FIO_STRING_INIT_STATIC(path);
   /* fio hash maps support up to 96 full collisions, we can use len as hash */
-  fio_router_insert(&routes, fio_str_len(&tmp), tmp, handler, NULL);
+  fio_router_insert(&routes, fio_string_length(&tmp), tmp, handler, NULL);
 }
 
 /* routes a request to the correct handler */
@@ -183,8 +183,8 @@ static void route_perform(http_s *h) {
   /* add required Serevr header */
   http_set_header(h, HTTP_HEADER_SERVER, fiobj_dup(HTTP_VALUE_SERVER));
   /* collect path from hash map */
-  fio_str_info_s tmp_i = fiobj_obj2cstr(h->path);
-  fio_str_s tmp = FIO_STR_INIT_EXISTING(tmp_i.data, tmp_i.len, 0);
+  fio_string_info_s tmp_i = fiobj_obj2cstr(h->path);
+  fio_string_s tmp = FIO_STRING_INIT_EXISTING(tmp_i.data, tmp_i.len, 0);
   fio_router_handler_fn handler = fio_router_find(&routes, tmp_i.len, tmp);
   /* forward request or send error */
   if (handler) {

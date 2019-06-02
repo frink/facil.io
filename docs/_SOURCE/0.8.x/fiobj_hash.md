@@ -30,10 +30,10 @@ This allows optimizations for larger (or smaller) collections.
 
 ### Hash properties and state
 
-#### `fiobj_hash_capa`
+#### `fiobj_hash_capacity`
 
 ```c
-size_t fiobj_hash_capa(const FIOBJ hash);
+size_t fiobj_hash_capacity(const FIOBJ hash);
 ```
 
 Returns a temporary theoretical Hash map capacity. This could be used for testing performance and memory consumption.

@@ -38,8 +38,8 @@ websocket-bench broadcast ws://127.0.0.1:3000/ --concurrent 10 \
 Sunscription related variables and callbacks (used also for testing)
 ***************************************************************************** */
 
-fio_str_info_s CHANNEL_TEXT = {.len = 4, .data = "text"};
-fio_str_info_s CHANNEL_BINARY = {.len = 6, .data = "binary"};
+fio_string_info_s CHANNEL_TEXT = {.len = 4, .data = "text"};
+fio_string_info_s CHANNEL_BINARY = {.len = 6, .data = "binary"};
 
 static size_t sub_count;
 static size_t unsub_count;
@@ -69,7 +69,7 @@ static void on_open_shootout_websocket_sse(http_sse_s *sse) {
   http_sse_subscribe(sse, .channel = CHANNEL_TEXT);
 }
 
-static void handle_websocket_messages(ws_s *ws, fio_str_info_s msg,
+static void handle_websocket_messages(ws_s *ws, fio_string_info_s msg,
                                       uint8_t is_text) {
   if (msg.data[0] == 'b') {
     fio_publish(.channel = CHANNEL_BINARY, .message = msg);
@@ -118,14 +118,14 @@ Pub/Sub logging (for debugging)
 
 /** Should subscribe channel. Failures are ignored. */
 static void logger_subscribe(const fio_pubsub_engine_s *eng,
-                             fio_str_info_s channel, fio_match_fn match) {
+                             fio_string_info_s channel, fio_match_fn match) {
   FIO_LOG_INFO("(%d) Channel subscription created: %s", getpid(), channel.data);
   (void)eng;
   (void)match;
 }
 /** Should unsubscribe channel. Failures are ignored. */
 static void logger_unsubscribe(const fio_pubsub_engine_s *eng,
-                               fio_str_info_s channel, fio_match_fn match) {
+                               fio_string_info_s channel, fio_match_fn match) {
   FIO_LOG_INFO("(%d) Channel subscription destroyed: %s", getpid(),
                channel.data);
   fflush(stderr);
@@ -134,7 +134,7 @@ static void logger_unsubscribe(const fio_pubsub_engine_s *eng,
 }
 /** Should publish a message through the engine. Failures are ignored. */
 static void logger_publish(const fio_pubsub_engine_s *eng,
-                           fio_str_info_s channel, fio_str_info_s msg,
+                           fio_string_info_s channel, fio_string_info_s msg,
                            uint8_t is_json) {
   (void)eng;
   (void)channel;

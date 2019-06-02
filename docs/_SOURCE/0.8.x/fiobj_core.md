@@ -11,10 +11,10 @@ These generic functions are listed here.
 
 ### FIOBJ Memory Management
 
-#### `fiobj_dup`
+#### `fiobj_duplicate`
 
 ```c
-FIOBJ fiobj_dup(FIOBJ);
+FIOBJ fiobj_duplicate(FIOBJ);
 ```
 
 Heuristic copy with a preference for copy by reference(!), to minimize allocations.
@@ -39,7 +39,7 @@ For Hash objects, only the value objects are deallocated. The `keys` aren't "own
 
 ```c
 ssize_t fiobj_send_free(intptr_t uuid, FIOBJ o) {
-  fio_str_info_s s = fiobj_obj2cstr(o);
+  fio_string_info_s s = fiobj_obj2cstr(o);
   return fio_write2(uuid, .data.buffer = (void *)(o),
                     .offset = (((intptr_t)s.data) - ((intptr_t)(o))),
                     .length = s.len, .after.dealloc = fiobj4sock_dealloc);
@@ -49,13 +49,13 @@ ssize_t fiobj_send_free(intptr_t uuid, FIOBJ o) {
 
 Sends a FIOBJ String object through a facil.io `uuid` socket and than frees the FIOBJ object.
 
-This allows the same String object to be send multiple times to different clients by leveraging `fiobj_dup` and the FIOBJ's internal reference counting mechanism. i.e:
+This allows the same String object to be send multiple times to different clients by leveraging `fiobj_duplicate` and the FIOBJ's internal reference counting mechanism. i.e:
 
 ```c
 /* for each client... */
-fiobj_send_free(client_uuid, fiobj_dup(fiobj_string));
+fiobj_send_free(client_uuid, fiobj_duplicate(fiobj_stringing));
 /* and than use fiobj_free, which will decrease the reference count. */
-fiobj_free(fiobj_string);
+fiobj_free(fiobj_stringing);
 ```
 
 **Note**: Using this function with FIOBJ objects that aren't a String (`FIOBJ_T_STRING`) might result in undefined behavior due to the way the String data is rendered by `fiobj_obj2cstr`.
@@ -159,17 +159,17 @@ A type error results in 0.
 #### `fiobj_obj2cstr`
 
 ```c
-fio_str_info_s fiobj_obj2cstr(const FIOBJ obj);
+fio_string_info_s fiobj_obj2cstr(const FIOBJ obj);
 ```
 
-Returns a C String (NUL terminated) using the `fio_str_info_s` data type:
+Returns a C String (NUL terminated) using the `fio_string_info_s` data type:
 
 ```c
-typedef struct fio_str_info_s {
+typedef struct fio_string_info_s {
   size_t capa; /* String capacity, if the string is writable. (only FIOBJ_T_STRING) */
   size_t len;  /* String length. */
   char *data;  /* String's first byte. */
-} fio_str_info_s;
+} fio_string_info_s;
 ```
 
 The Sting in binary safe and might contain NUL bytes in the middle as well as

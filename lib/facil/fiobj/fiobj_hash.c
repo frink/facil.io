@@ -131,9 +131,9 @@ static size_t fiobj_hash_is_true(const FIOBJ o) {
   return fiobj_hash_count(o) != 0;
 }
 
-fio_str_info_s fiobject___noop_to_str(const FIOBJ o);
-intptr_t fiobject___noop_to_i(const FIOBJ o);
-double fiobject___noop_to_f(const FIOBJ o);
+fio_string_info_s fiobject___noop_to_string(const FIOBJ o);
+intptr_t fiobject___noop_to_integer(const FIOBJ o);
+double fiobject___noop_to_float(const FIOBJ o);
 
 const fiobj_object_vtable_s FIOBJECT_VTABLE_HASH = {
     .class_name = "Hash",
@@ -177,7 +177,7 @@ FIOBJ fiobj_hash_new2(size_t capa) {
   FIO_ASSERT_ALLOC(h);
   *h = (fiobj_hash_s){.head = {.ref = 1, .type = FIOBJ_T_HASH},
                       .hash = FIO_SET_INIT};
-  fio_hash___capa_require(&h->hash, capa);
+  fio_hash___capacity_require(&h->hash, capa);
   return (FIOBJ)h | FIOBJECT_HASH_FLAG;
 }
 
@@ -185,9 +185,9 @@ FIOBJ fiobj_hash_new2(size_t capa) {
  * Returns a temporary theoretical Hash map capacity.
  * This could be used for testing performance and memory consumption.
  */
-size_t fiobj_hash_capa(const FIOBJ hash) {
+size_t fiobj_hash_capacity(const FIOBJ hash) {
   assert(hash && FIOBJ_TYPE_IS(hash, FIOBJ_T_HASH));
-  return fio_hash___capa(&obj2hash(hash)->hash);
+  return fio_hash___capacity(&obj2hash(hash)->hash);
 }
 
 /**
@@ -199,7 +199,7 @@ size_t fiobj_hash_capa(const FIOBJ hash) {
 int fiobj_hash_set(FIOBJ hash, FIOBJ key, FIOBJ obj) {
   assert(hash && FIOBJ_TYPE_IS(hash, FIOBJ_T_HASH));
   if (FIOBJ_TYPE_IS(key, FIOBJ_T_STRING))
-    fiobj_str_freeze(key);
+    fiobj_string_freeze(key);
   fio_hash___insert(&obj2hash(hash)->hash, fiobj_obj2hash(key), key, obj, NULL);
   fiobj_free(obj); /* take ownership - free the user's reference. */
   return 0;
@@ -345,11 +345,11 @@ void fiobj_test_hash(void) {
     exit(-1);                                                                  \
   }
   FIOBJ o = fiobj_hash_new();
-  FIOBJ str_key = fiobj_str_new("Hello World!", 12);
+  FIOBJ str_key = fiobj_string_new("Hello World!", 12);
   TEST_ASSERT(FIOBJ_TYPE_IS(o, FIOBJ_T_HASH), "Type identification error!\n");
   TEST_ASSERT(fiobj_hash_count(o) == 0, "Hash should be empty!\n");
   fiobj_hash_set(o, str_key, fiobj_true());
-  TEST_ASSERT(fiobj_str_write(str_key, "should fail...", 13) == 0,
+  TEST_ASSERT(fiobj_string_write(str_key, "should fail...", 13) == 0,
               "wrote to frozen string?");
   TEST_ASSERT(fiobj_obj2cstr(str_key).len == 12,
               "String was mutated (not frozen)!\n");

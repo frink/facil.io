@@ -18,38 +18,38 @@ They are all designed to use a data container (that can be allocated either on t
 
 And although they often prefer ease of use over performance, they are very libraries.
 
-* [Dynamic String Library](lib/facil/core/types/fiobj/fio_str.h): this library is easy to use and helps with authoring binary and C Strings.
+* [Dynamic String Library](lib/facil/core/types/fiobj/fio_string.h): this library is easy to use and helps with authoring binary and C Strings.
 
     For example:
 
     ```c
     // container on the stack
-    fio_str_s str = FIO_STR_INIT;
-    fio_str_write(&str, "Hello", 5);
-    fio_str_printf(&str, " world, %d", 42);
-    printf("%s\n", fio_str_data(&str)); // "Hello world, 42"
-    fio_str_free(&str);
+    fio_string_s str = FIO_STRING_INIT;
+    fio_string_write(&str, "Hello", 5);
+    fio_string_printf(&str, " world, %d", 42);
+    printf("%s\n", fio_string_data(&str)); // "Hello world, 42"
+    fio_string_free(&str);
 
     // container on the heap
-    fio_str_s *str = malloc(sozeof(*str));
-    *str = FIO_STR_INIT;
+    fio_string_s *str = malloc(sozeof(*str));
+    *str = FIO_STRING_INIT;
     // use ... and ... free when done:
-    fio_str_free(str);
+    fio_string_free(str);
     free(str);
     ```
 
     It should be noted that short Strings (up to 30 bytes on 64bit machines) will be stored within the container without additional memory allocations, improving performance for many common use cases.
 
-* [Dynamic Array Library](lib/facil/core/types/fiobj/fio_ary.h): was designed to make dynamic arrays easy to handle.
+* [Dynamic Array Library](lib/facil/core/types/fiobj/fio_array.h): was designed to make dynamic arrays easy to handle.
 
     For example:
 
     ```c
     // container on the stack (can also be placed on the heap).
-    fio_ary_s ary = FIO_ARY_INIT;
-    fio_ary_push(&ary, (void *)1);
-    printf("Array pop value: %zd", (size_t)fio_ary_pop(&ary));
-    fio_ary_free(&ary);
+    fio_array_s ary = FIO_ARRAY_INIT;
+    fio_array_push(&ary, (void *)1);
+    printf("Array pop value: %zd", (size_t)fio_array_pop(&ary));
+    fio_array_free(&ary);
     ```
 
 * [Dynamic Hash Map Library](lib/facil/core/types/fiobj/fio_hashmap.h): was designed to make Hash maps a breeze.

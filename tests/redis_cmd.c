@@ -15,20 +15,20 @@ static void ask4data_callback(fio_pubsub_engine_s *e, FIOBJ reply,
             fiobj_type_name(reply));
     return;
   }
-  size_t count = fiobj_ary_count(reply);
+  size_t count = fiobj_array_count(reply);
   fprintf(stderr, "Redis command results (%zu):\n", count);
   for (size_t i = 0; i < count; ++i) {
-    fprintf(stderr, "* %s\n", fiobj_obj2cstr(fiobj_ary_index(reply, i)).data);
+    fprintf(stderr, "* %s\n", fiobj_obj2cstr(fiobj_array_index(reply, i)).data);
   }
   kill(SIGINT, 0);
   (void)e;
 }
 static void ask4data(void *ignr) {
-  FIOBJ data = fiobj_ary_new();
-  fiobj_ary_push(data, fiobj_str_new("LRANGE", 6));
-  fiobj_ary_push(data, fiobj_str_new("pids", 4));
-  fiobj_ary_push(data, fiobj_num_new(0));
-  fiobj_ary_push(data, fiobj_num_new(-1));
+  FIOBJ data = fiobj_array_new();
+  fiobj_array_push(data, fiobj_string_new("LRANGE", 6));
+  fiobj_array_push(data, fiobj_string_new("pids", 4));
+  fiobj_array_push(data, fiobj_num_new(0));
+  fiobj_array_push(data, fiobj_num_new(-1));
 
   (void)ignr;
   redis_engine_send(FIO_PUBSUB_DEFAULT, data, ask4data_callback, (void *)0x01);
@@ -46,18 +46,18 @@ static void after_fork(void *ignr) {
     /* runs only once */
     fio_run_every(2000, 1, ask4data, NULL, NULL);
   }
-  FIOBJ data = fiobj_ary_new();
-  fiobj_ary_push(data, fiobj_str_new("LPUSH", 5));
-  fiobj_ary_push(data, fiobj_str_new("pids", 4));
+  FIOBJ data = fiobj_array_new();
+  fiobj_array_push(data, fiobj_string_new("LPUSH", 5));
+  fiobj_array_push(data, fiobj_string_new("pids", 4));
   if (0) {
     /* nested arrays... but lists can't contain them */
-    FIOBJ tmp = fiobj_ary_new2(2);
-    fiobj_ary_push(tmp, fiobj_str_new("worker pid", 10));
-    fiobj_ary_push(tmp, fiobj_str_copy(fiobj_num_tmp(getpid())));
-    fiobj_ary_push(data, tmp);
+    FIOBJ tmp = fiobj_array_new2(2);
+    fiobj_array_push(tmp, fiobj_string_new("worker pid", 10));
+    fiobj_array_push(tmp, fiobj_string_copy(fiobj_num_tmp(getpid())));
+    fiobj_array_push(data, tmp);
   } else {
     /* lists contain only Strings, so we need a string */
-    fiobj_ary_push(data, fiobj_str_copy(fiobj_num_tmp(getpid())));
+    fiobj_array_push(data, fiobj_string_copy(fiobj_num_tmp(getpid())));
   }
   redis_engine_send(FIO_PUBSUB_DEFAULT, data, NULL, NULL);
   fiobj_free(data);

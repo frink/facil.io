@@ -225,7 +225,7 @@ typedef struct {
   } private_data;
   struct timespec received_at;
   FIOBJ method;
-  FIOBJ status_str;
+  FIOBJ status_string;
   FIOBJ version;
   uintptr_t status;
   FIOBJ path;
@@ -265,7 +265,7 @@ A time merker indicating when the request was received.
 FIOBJ method;
 ```
 
-A [FIOBJ String](fiobj_str) containing the HTTP method string.
+A [FIOBJ String](fiobj_string) containing the HTTP method string.
 
 facil.io accepts non-standard methods as well as the standard GET, PUT, POST, etc' HTTP methods. 
 
@@ -279,13 +279,13 @@ The status used for the response (or if the object is a response).
 
 When sending a request, the status should be set to 0.
 
-#### `h->status_str`
+#### `h->status_string`
 
 ```c
-FIOBJ status_str;
+FIOBJ status_string;
 ```
 
-A [FIOBJ String](fiobj_str) containing the HTTP status string, for response objects (client mode response).
+A [FIOBJ String](fiobj_string) containing the HTTP status string, for response objects (client mode response).
 
 #### `h->version`
 
@@ -293,7 +293,7 @@ A [FIOBJ String](fiobj_str) containing the HTTP status string, for response obje
 FIOBJ version;
 ```
 
-A [FIOBJ String](fiobj_str) containing the HTTP version string, if any.
+A [FIOBJ String](fiobj_string) containing the HTTP version string, if any.
 
 #### `h->path`
 
@@ -301,7 +301,7 @@ A [FIOBJ String](fiobj_str) containing the HTTP version string, if any.
 FIOBJ path;
 ```
 
-A [FIOBJ String](fiobj_str) containing the request path string, if any.
+A [FIOBJ String](fiobj_string) containing the request path string, if any.
 
 #### `h->query`
 
@@ -309,7 +309,7 @@ A [FIOBJ String](fiobj_str) containing the request path string, if any.
 FIOBJ query;
 ```
 
-A [FIOBJ String](fiobj_str) containing the request query string, if any.
+A [FIOBJ String](fiobj_string) containing the request query string, if any.
 
 #### `h->headers`
 
@@ -317,7 +317,7 @@ A [FIOBJ String](fiobj_str) containing the request query string, if any.
 FIOBJ headers;
 ```
 
-A [FIOBJ Hash Map](fiobj_hash) containing the received header data as either a [FIOBJ String](fiobj_str) or an [FIOBJ Array](fiobj_ary).
+A [FIOBJ Hash Map](fiobj_hash) containing the received header data as either a [FIOBJ String](fiobj_string) or an [FIOBJ Array](fiobj_array).
 
 When a header is received multiple times (such as cookie headers), an Array of Strings will be used instead of a single String.
 
@@ -386,7 +386,7 @@ Returns the settings used to setup the connection or NULL on error.
 #### `http_peer_addr`
 
 ```c
-fio_str_info_s http_peer_addr(http_s *h);
+fio_string_info_s http_peer_addr(http_s *h);
 ```
 
 Returns the direct address of the connected peer (most possibly an intermediary / proxy server).
@@ -409,7 +409,7 @@ Returns -1 on error and 0 on success.
 #### `http_set_header2`
 
 ```c
-int http_set_header2(http_s *h, fio_str_info_s name, fio_str_info_s value);
+int http_set_header2(http_s *h, fio_string_info_s name, fio_string_info_s value);
 ```
 
 Sets an outgoing header, copying the data.
@@ -759,7 +759,7 @@ Same as [`http_add2hash`](#http_add2hash), using an existing object.
 #### `http_status2str`
 
 ```c
-fio_str_info_s http_status2str(uintptr_t status);
+fio_string_info_s http_status2str(uintptr_t status);
 ```
 
 Returns a human readable string representing the HTTP status number. 
@@ -767,7 +767,7 @@ Returns a human readable string representing the HTTP status number.
 #### `http_hijack`
 
 ```c
-intptr_t http_hijack(http_s *h, fio_str_info_s *leftover);
+intptr_t http_hijack(http_s *h, fio_string_info_s *leftover);
 ```
 
 Hijacks the socket away from the HTTP protocol and away from facil.io.
@@ -834,7 +834,7 @@ In addition to the `http_s` argument, the following named arguments can be used:
     The data received points to the WebSocket's message buffer and it will be overwritten once the function exits (it cannot be saved for later, but it can be copied).
 
         // callback example:
-        void on_message(ws_s *ws, fio_str_info_s msg, uint8_t is_text);
+        void on_message(ws_s *ws, fio_string_info_s msg, uint8_t is_text);
 
 * `on_ready`:
 
@@ -908,7 +908,7 @@ Returns -1 on error;
 #### `websocket_write`
 
 ```c
-int websocket_write(ws_s *ws, fio_str_info_s msg, uint8_t is_text);
+int websocket_write(ws_s *ws, fio_string_info_s msg, uint8_t is_text);
 ```
 
 Writes data to the WebSocket. Returns -1 on failure (0 on success).
@@ -945,7 +945,7 @@ In addition to the `ws_s *` argument, the following named arguments can be used:
     The channel name used for the subscription. If missing, an empty string is assumed to be the channel name.
 
         // type:
-        fio_str_info_s channel;
+        fio_string_info_s channel;
  
 * `on_message`:
 
@@ -954,8 +954,8 @@ In addition to the `ws_s *` argument, the following named arguments can be used:
     If missing, Data is directly written to the WebSocket connection.
 
         // callback example:
-        void on_message(ws_s *ws, fio_str_info_s channel,
-                     fio_str_info_s msg, void *udata);
+        void on_message(ws_s *ws, fio_string_info_s channel,
+                     fio_string_info_s msg, void *udata);
 
 * `on_unsubscribe`:
 
@@ -971,7 +971,7 @@ In addition to the `ws_s *` argument, the following named arguments can be used:
     Note that only the `FIO_MATCH_GLOB` matching function (or NULL for no pattern matching) is safe to use with the Redis extension.
 
         // callback example:
-        int foo_bar_match_fn(fio_str_info_s pattern, fio_str_info_s channel);
+        int foo_bar_match_fn(fio_string_info_s pattern, fio_string_info_s channel);
         // type:
         fio_match_fn match;
 
@@ -1047,7 +1047,7 @@ The pub/sub metadata type ID will match the optimnization type requested (i.e., 
 ```c
 FIOBJ pre_wrapped = (FIOBJ)fio_message_metadata(msg,
                           WEBSOCKET_OPTIMIZE_PUBSUB);
-fiobj_send_free((intptr_t)msg->udata1, fiobj_dup(pre_wrapped));
+fiobj_send_free((intptr_t)msg->udata1, fiobj_duplicate(pre_wrapped));
 ```
 
 **Note**: to disable an optimization it should be disabled the same amount of times it was enabled - multiple optimization enablements for the same type are merged, but reference counted (disabled when reference is zero).
@@ -1224,7 +1224,7 @@ In addition to the `sse` argument, the following named arguments can be used:
     The channel name used for the subscription. If missing, an empty string is assumed to be the channel name.
 
         // type:
-        fio_str_info_s channel;
+        fio_string_info_s channel;
  
 * `on_message`:
 
@@ -1233,8 +1233,8 @@ In addition to the `sse` argument, the following named arguments can be used:
     If missing, Data is directly written to the HTTP connection.
 
         // callback example:
-        void on_message(http_sse_s *sse, fio_str_info_s channel,
-                     fio_str_info_s msg, void *udata);
+        void on_message(http_sse_s *sse, fio_string_info_s channel,
+                     fio_string_info_s msg, void *udata);
 
 * `on_unsubscribe`:
 
@@ -1252,7 +1252,7 @@ In addition to the `sse` argument, the following named arguments can be used:
     Note that only the `FIO_MATCH_GLOB` matching function (or NULL for no pattern matching) is safe to use with the Redis extension.
 
         // callback example:
-        int foo_bar_match_fn(fio_str_info_s pattern, fio_str_info_s channel);
+        int foo_bar_match_fn(fio_string_info_s pattern, fio_string_info_s channel);
         // type:
         fio_match_fn match;
  
@@ -1296,28 +1296,28 @@ In addition to the `sse` argument, the following named arguments can be used:
     Sets the `id` event property (optional).
 
         // type:
-        fio_str_info_s id;
+        fio_string_info_s id;
  
 * `event`:
 
     Sets the `event` event property (optional).
 
         // type:
-        fio_str_info_s event;
+        fio_string_info_s event;
  
 * `data`:
 
     Sets the `data` event property (optional).
 
         // type:
-        fio_str_info_s data;
+        fio_string_info_s data;
  
 * `retry`:
 
     Sets the `retry` event property (optional).
 
         // type:
-        fio_str_info_s retry;
+        fio_string_info_s retry;
  
 
 Event field details can be found on the [Mozilla developer website](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events).
@@ -1332,10 +1332,10 @@ intptr_t http_sse2uuid(http_sse_s *sse);
 
 Get the connection's UUID (for `fio_defer_io_task`, pub/sub, etc').
 
-#### `http_sse_dup`
+#### `http_sse_duplicate`
 
 ```c
-http_sse_s *http_sse_dup(http_sse_s *sse);
+http_sse_s *http_sse_duplicate(http_sse_s *sse);
 ```
 
 Duplicates an SSE handle by reference, remember to http_sse_free.
@@ -1368,10 +1368,10 @@ It is recommended (and assumed) that all the calls to `http_mimetype_register` a
 
 ```c
 void http_mimetype_register(char *file_ext, size_t file_ext_len,
-                            FIOBJ mime_type_str);
+                            FIOBJ mime_type_string);
 ```
 
-Registers a Mime-Type to be associated with a file extension, taking ownership of the `mime_type_str` String (use `fiobj_dup` to keep a copy).
+Registers a Mime-Type to be associated with a file extension, taking ownership of the `mime_type_string` String (use `fiobj_duplicate` to keep a copy).
 
 File extension names should exclude the dot (`'.'`) marking the beginning of the extension. i.e., use `"jpg"`, `"html"`, etc' (**not** `".jpg"`).
 

@@ -16,8 +16,8 @@ Than run:
 #include "fio.h"
 #include "fio_tls.h"
 
-/* add the fio_str_s helpers */
-#define FIO_STR_NAME fio_str
+/* add the fio_string_s helpers */
+#define FIO_STRING_NAME fio_str
 #define FIO_CLI 1
 #include "fio-stl.h"
 
@@ -176,10 +176,10 @@ int main(int argc, char const *argv[]) {
       const char *end = memchr(trust, ',', len);
       while (end) {
         /* copy partial string to attach NUL char at end of file name */
-        fio_str_s tmp = FIO_STR_INIT;
-        fio_str_info_s t = fio_str_write(&tmp, trust, end - trust);
+        fio_string_s tmp = FIO_STRING_INIT;
+        fio_string_info_s t = fio_string_write(&tmp, trust, end - trust);
         fio_tls_trust(tls, t.data);
-        fio_str_free(&tmp);
+        fio_string_free(&tmp);
         len -= (end - trust) + 1;
         trust = end + 1;
         end = memchr(trust, ',', len);

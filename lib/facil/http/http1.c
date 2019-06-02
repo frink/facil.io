@@ -45,7 +45,7 @@ inline static void h1_reset(http1pr_s *p) { p->header_size = 0; }
 #define http1_pr2handle(pr) (((http1pr_s *)(pr))->request)
 #define handle2pr(h) ((http1pr_s *)h->private_data.flag)
 
-static fio_str_info_s http1pr_status2str(uintptr_t status);
+static fio_string_info_s http1pr_status2str(uintptr_t status);
 
 /* cleanup an HTTP/1.1 handler object */
 static inline void http1_after_finish(http_s *h) {
@@ -81,17 +81,17 @@ static int write_header(FIOBJ o, void *w_) {
     fiobj_each1(o, 0, write_header, w);
     return 0;
   }
-  fio_str_info_s name = fiobj_obj2cstr(w->name);
-  fio_str_info_s str = fiobj_obj2cstr(o);
+  fio_string_info_s name = fiobj_obj2cstr(w->name);
+  fio_string_info_s str = fiobj_obj2cstr(o);
   if (!str.data)
     return 0;
-  // fiobj_str_capa_assert(w->dest,
+  // fiobj_string_capacity_assert(w->dest,
   //                       fiobj_obj2cstr(w->dest).len + name.len + str.len +
   //                       5);
-  fiobj_str_write(w->dest, name.data, name.len);
-  fiobj_str_write(w->dest, ":", 1);
-  fiobj_str_write(w->dest, str.data, str.len);
-  fiobj_str_write(w->dest, "\r\n", 2);
+  fiobj_string_write(w->dest, name.data, name.len);
+  fiobj_string_write(w->dest, ":", 1);
+  fiobj_string_write(w->dest, str.data, str.len);
+  fiobj_string_write(w->dest, "\r\n", 2);
   return 0;
 }
 
@@ -107,13 +107,13 @@ static FIOBJ headers2str(http_s *h, uintptr_t padding) {
   {
     const uintptr_t header_length_guess =
         fiobj_hash_count(h->private_data.out_headers) * 64;
-    w.dest = fiobj_str_buf(header_length_guess + padding);
+    w.dest = fiobj_string_buffer(header_length_guess + padding);
   }
   http1pr_s *p = handle2pr(h);
 
   if (p->is_client == 0) {
-    fio_str_info_s t = http1pr_status2str(h->status);
-    fiobj_str_write(w.dest, t.data, t.len);
+    fio_string_info_s t = http1pr_status2str(h->status);
+    fiobj_string_write(w.dest, t.data, t.len);
     FIOBJ tmp = fiobj_hash_get2(h->private_data.out_headers, connection_hash);
     if (tmp) {
       t = fiobj_obj2cstr(tmp);
@@ -124,35 +124,35 @@ static FIOBJ headers2str(http_s *h, uintptr_t padding) {
       if (tmp) {
         t = fiobj_obj2cstr(tmp);
         if (!t.data || !t.len || t.data[0] == 'k' || t.data[0] == 'K')
-          fiobj_str_write(w.dest, "connection:keep-alive\r\n", 23);
+          fiobj_string_write(w.dest, "connection:keep-alive\r\n", 23);
         else {
-          fiobj_str_write(w.dest, "connection:close\r\n", 18);
+          fiobj_string_write(w.dest, "connection:close\r\n", 18);
           p->close = 1;
         }
       } else {
         t = fiobj_obj2cstr(h->version);
         if (!p->close && t.len > 7 && t.data && t.data[5] == '1' &&
             t.data[6] == '.' && t.data[7] == '1')
-          fiobj_str_write(w.dest, "connection:keep-alive\r\n", 23);
+          fiobj_string_write(w.dest, "connection:keep-alive\r\n", 23);
         else {
-          fiobj_str_write(w.dest, "connection:close\r\n", 18);
+          fiobj_string_write(w.dest, "connection:close\r\n", 18);
           p->close = 1;
         }
       }
     }
   } else {
     if (h->method) {
-      fiobj_str_join(w.dest, h->method);
-      fiobj_str_write(w.dest, " ", 1);
+      fiobj_string_join(w.dest, h->method);
+      fiobj_string_write(w.dest, " ", 1);
     } else {
-      fiobj_str_write(w.dest, "GET ", 4);
+      fiobj_string_write(w.dest, "GET ", 4);
     }
-    fiobj_str_join(w.dest, h->path);
+    fiobj_string_join(w.dest, h->path);
     if (h->query) {
-      fiobj_str_write(w.dest, "?", 1);
-      fiobj_str_join(w.dest, h->query);
+      fiobj_string_write(w.dest, "?", 1);
+      fiobj_string_join(w.dest, h->query);
     }
-    fiobj_str_write(w.dest, " HTTP/1.1\r\n", 11);
+    fiobj_string_write(w.dest, " HTTP/1.1\r\n", 11);
     /* make sure we have a host header? */
     static uint64_t host_hash;
     if (!host_hash)
@@ -160,16 +160,16 @@ static FIOBJ headers2str(http_s *h, uintptr_t padding) {
     FIOBJ tmp;
     if (!fiobj_hash_get2(h->private_data.out_headers, host_hash) &&
         (tmp = fiobj_hash_get2(h->headers, host_hash))) {
-      fiobj_str_write(w.dest, "host:", 5);
-      fiobj_str_join(w.dest, tmp);
-      fiobj_str_write(w.dest, "\r\n", 2);
+      fiobj_string_write(w.dest, "host:", 5);
+      fiobj_string_join(w.dest, tmp);
+      fiobj_string_write(w.dest, "\r\n", 2);
     }
     if (!fiobj_hash_get2(h->private_data.out_headers, connection_hash))
-      fiobj_str_write(w.dest, "connection:keep-alive\r\n", 23);
+      fiobj_string_write(w.dest, "connection:keep-alive\r\n", 23);
   }
 
   fiobj_each1(h->private_data.out_headers, 0, write_header, &w);
-  fiobj_str_write(w.dest, "\r\n", 2);
+  fiobj_string_write(w.dest, "\r\n", 2);
   return w.dest;
 }
 
@@ -181,7 +181,7 @@ static int http1_send_body(http_s *h, void *data, uintptr_t length) {
     http1_after_finish(h);
     return -1;
   }
-  fiobj_str_write(packet, data, length);
+  fiobj_string_write(packet, data, length);
   fiobj_send_free((handle2pr(h)->p.uuid), packet);
   http1_after_finish(h);
   return 0;
@@ -197,8 +197,8 @@ static int http1_sendfile(http_s *h, int fd, uintptr_t length,
   }
   if (length < HTTP_MAX_HEADER_LENGTH) {
     /* optimize away small files */
-    fio_str_info_s s = fiobj_obj2cstr(packet);
-    fiobj_str_capa_assert(packet, s.len + length);
+    fio_string_info_s s = fiobj_obj2cstr(packet);
+    fiobj_string_capacity_assert(packet, s.len + length);
     s = fiobj_obj2cstr(packet);
     intptr_t i = pread(fd, s.data + s.len, length, offset);
     if (i < 0) {
@@ -208,7 +208,7 @@ static int http1_sendfile(http_s *h, int fd, uintptr_t length,
       return -1;
     }
     close(fd);
-    fiobj_str_resize(packet, s.len + i);
+    fiobj_string_resize(packet, s.len + i);
     fiobj_send_free((handle2pr(h)->p.uuid), packet);
     http1_after_finish(h);
     return 0;
@@ -265,16 +265,16 @@ static void http1_on_resume(http_s *h, http_fio_protocol_s *pr) {
   (void)h;
 }
 
-static intptr_t http1_hijack(http_s *h, fio_str_info_s *leftover) {
+static intptr_t http1_hijack(http_s *h, fio_string_info_s *leftover) {
   if (leftover) {
     intptr_t len =
         handle2pr(h)->buf_len -
         (intptr_t)(handle2pr(h)->parser.state.next - handle2pr(h)->buf);
     if (len) {
-      *leftover = (fio_str_info_s){
+      *leftover = (fio_string_info_s){
           .len = len, .data = (char *)handle2pr(h)->parser.state.next};
     } else {
-      *leftover = (fio_str_info_s){.len = 0, .data = NULL};
+      *leftover = (fio_string_info_s){.len = 0, .data = NULL};
     }
   }
 
@@ -333,7 +333,7 @@ static int http1_http2websocket_server(http_s *h, websocket_settings_s *args) {
   FIOBJ tmp = fiobj_hash_get2(h->headers, sec_version);
   if (!tmp)
     goto bad_request;
-  fio_str_info_s stmp = fiobj_obj2cstr(tmp);
+  fio_string_info_s stmp = fiobj_obj2cstr(tmp);
   if (stmp.len != 2 || stmp.data[0] != '1' || stmp.data[1] != '3')
     goto bad_request;
 
@@ -345,12 +345,12 @@ static int http1_http2websocket_server(http_s *h, websocket_settings_s *args) {
   fio_sha1_s sha1 = fio_sha1_init();
   fio_sha1_write(&sha1, stmp.data, stmp.len);
   fio_sha1_write(&sha1, ws_key_accpt_str, sizeof(ws_key_accpt_str) - 1);
-  tmp = fiobj_str_buf(32);
+  tmp = fiobj_string_buffer(32);
   stmp = fiobj_obj2cstr(tmp);
-  fiobj_str_resize(tmp,
+  fiobj_string_resize(tmp,
                    fio_base64_encode(stmp.data, fio_sha1_result(&sha1), 20));
-  http_set_header(h, HTTP_HEADER_CONNECTION, fiobj_dup(HTTP_HVALUE_WS_UPGRADE));
-  http_set_header(h, HTTP_HEADER_UPGRADE, fiobj_dup(HTTP_HVALUE_WEBSOCKET));
+  http_set_header(h, HTTP_HEADER_CONNECTION, fiobj_duplicate(HTTP_HVALUE_WS_UPGRADE));
+  http_set_header(h, HTTP_HEADER_UPGRADE, fiobj_duplicate(HTTP_HVALUE_WEBSOCKET));
   http_set_header(h, HTTP_HEADER_WS_SEC_KEY, tmp);
   h->status = 101;
   http1pr_s *pr = handle2pr(h);
@@ -382,25 +382,25 @@ static int http1_http2websocket_client(http_s *h, websocket_settings_s *args) {
   p->p.settings->on_response = http1_websocket_client_on_failed; /* failed */
   p->p.settings->on_request = http1_websocket_client_on_failed;  /* failed */
   /* Set headers */
-  http_set_header(h, HTTP_HEADER_CONNECTION, fiobj_dup(HTTP_HVALUE_WS_UPGRADE));
-  http_set_header(h, HTTP_HEADER_UPGRADE, fiobj_dup(HTTP_HVALUE_WEBSOCKET));
+  http_set_header(h, HTTP_HEADER_CONNECTION, fiobj_duplicate(HTTP_HVALUE_WS_UPGRADE));
+  http_set_header(h, HTTP_HEADER_UPGRADE, fiobj_duplicate(HTTP_HVALUE_WEBSOCKET));
   http_set_header(h, HTTP_HVALUE_WS_SEC_VERSION,
-                  fiobj_dup(HTTP_HVALUE_WS_VERSION));
+                  fiobj_duplicate(HTTP_HVALUE_WS_VERSION));
 
   /* we don't set the Origin header since we're not a browser... should we? */
   // http_set_header(
   //     h, HTTP_HEADER_ORIGIN,
-  //     fiobj_dup(fiobj_hash_get2(h->private_data.out_headers,
+  //     fiobj_duplicate(fiobj_hash_get2(h->private_data.out_headers,
   //                               fiobj_obj2hash(HTTP_HEADER_HOST))));
 
   /* create nonce */
   uint64_t key[2]; /* 16 bytes */
   key[0] = (uintptr_t)h ^ (uint64_t)fio_last_tick().tv_sec;
   key[1] = (uintptr_t)args->udata ^ (uint64_t)fio_last_tick().tv_nsec;
-  FIOBJ encoded = fiobj_str_buf(26); /* we need 24 really. */
-  fio_str_info_s tmp = fiobj_obj2cstr(encoded);
+  FIOBJ encoded = fiobj_string_buffer(26); /* we need 24 really. */
+  fio_string_info_s tmp = fiobj_obj2cstr(encoded);
   tmp.len = fio_base64_encode(tmp.data, (char *)key, 16);
-  fiobj_str_resize(encoded, tmp.len);
+  fiobj_string_resize(encoded, tmp.len);
   http_set_header(h, HTTP_HEADER_WS_SEC_CLIENT_KEY, encoded);
   http_finish(h);
   return 0;
@@ -464,11 +464,11 @@ static int http1_upgrade2sse(http_s *h, http_sse_s *sse) {
   const intptr_t uuid = handle2pr(h)->p.uuid;
   /* send response */
   h->status = 200;
-  http_set_header(h, HTTP_HEADER_CONTENT_TYPE, fiobj_dup(HTTP_HVALUE_SSE_MIME));
+  http_set_header(h, HTTP_HEADER_CONTENT_TYPE, fiobj_duplicate(HTTP_HVALUE_SSE_MIME));
   http_set_header(h, HTTP_HEADER_CACHE_CONTROL,
-                  fiobj_dup(HTTP_HVALUE_NO_CACHE));
+                  fiobj_duplicate(HTTP_HVALUE_NO_CACHE));
   http_set_header(h, HTTP_HEADER_CONTENT_ENCODING,
-                  fiobj_str_new("identity", 8));
+                  fiobj_string_new("identity", 8));
   handle2pr(h)->stop = 1;
   htt1p_finish(h); /* avoid the enforced content length in http_finish */
 
@@ -569,7 +569,7 @@ static int http1_on_response(http1_parser_s *parser) {
 static int http1_on_method(http1_parser_s *parser, char *method,
                            size_t method_len) {
   http1_pr2handle(parser2http(parser)).method =
-      fiobj_str_new(method, method_len);
+      fiobj_string_new(method, method_len);
   parser2http(parser)->header_size += method_len;
   return 0;
 }
@@ -579,7 +579,7 @@ static int http1_on_method(http1_parser_s *parser, char *method,
 static int http1_on_status(http1_parser_s *parser, size_t status,
                            char *status_str, size_t len) {
   http1_pr2handle(parser2http(parser)).status_str =
-      fiobj_str_new(status_str, len);
+      fiobj_string_new(status_str, len);
   http1_pr2handle(parser2http(parser)).status = status;
   parser2http(parser)->header_size += len;
   return 0;
@@ -587,21 +587,21 @@ static int http1_on_status(http1_parser_s *parser, size_t status,
 
 /** called when a request path (excluding query) is parsed. */
 static int http1_on_path(http1_parser_s *parser, char *path, size_t len) {
-  http1_pr2handle(parser2http(parser)).path = fiobj_str_new(path, len);
+  http1_pr2handle(parser2http(parser)).path = fiobj_string_new(path, len);
   parser2http(parser)->header_size += len;
   return 0;
 }
 
 /** called when a request path (excluding query) is parsed. */
 static int http1_on_query(http1_parser_s *parser, char *query, size_t len) {
-  http1_pr2handle(parser2http(parser)).query = fiobj_str_new(query, len);
+  http1_pr2handle(parser2http(parser)).query = fiobj_string_new(query, len);
   parser2http(parser)->header_size += len;
   return 0;
 }
 /** called when a the HTTP/1.x version is parsed. */
 static int http1_on_http_version(http1_parser_s *parser, char *version,
                                  size_t len) {
-  http1_pr2handle(parser2http(parser)).version = fiobj_str_new(version, len);
+  http1_pr2handle(parser2http(parser)).version = fiobj_string_new(version, len);
   parser2http(parser)->header_size += len;
 /* start counting - occurs on the first line of both requests and responses */
 #if FIO_HTTP_EXACT_LOGGING
@@ -636,8 +636,8 @@ static int http1_on_header(http1_parser_s *parser, char *name, size_t name_len,
     http_send_error(&http1_pr2handle(parser2http(parser)), 413);
     return -1;
   }
-  sym = fiobj_str_new(name, name_len);
-  obj = fiobj_str_new(data, data_len);
+  sym = fiobj_string_new(name, name_len);
+  obj = fiobj_string_new(data, data_len);
   set_header_add(http1_pr2handle(parser2http(parser)).headers, sym, obj);
   fiobj_free(sym);
   return 0;
@@ -655,7 +655,7 @@ static int http1_on_body_chunk(http1_parser_s *parser, char *data,
   if (!parser->state.read) {
     if (parser->state.content_length > 0 &&
         parser->state.content_length <= HTTP_MAX_HEADER_LENGTH) {
-      http1_pr2handle(parser2http(parser)).body = fiobj_data_newstr();
+      http1_pr2handle(parser2http(parser)).body = fiobj_data_new_string();
     } else {
       http1_pr2handle(parser2http(parser)).body = fiobj_data_newtmpfile();
     }
@@ -709,7 +709,7 @@ static inline void http1_consume_data(intptr_t uuid, http1pr_s *p) {
     if (p->request.method)
       http_send_error(&p->request, 413);
     else {
-      p->request.method = fiobj_str_tmp();
+      p->request.method = fiobj_string_tmp();
       http_send_error(&p->request, 413);
     }
   }
@@ -834,8 +834,8 @@ Protocol Data
 // #undef HTTP_SET_STATUS_STR
 // clang-format on
 
-static fio_str_info_s http1pr_status2str(uintptr_t status) {
-  static fio_str_info_s status2str[] = {
+static fio_string_info_s http1pr_status2str(uintptr_t status) {
+  static fio_string_info_s status2str[] = {
       HTTP_SET_STATUS_STR(100, "Continue"),
       HTTP_SET_STATUS_STR(101, "Switching Protocols"),
       HTTP_SET_STATUS_STR(102, "Processing"),
@@ -901,7 +901,7 @@ static fio_str_info_s http1pr_status2str(uintptr_t status) {
       HTTP_SET_STATUS_STR(510, "Not Extended"),
       HTTP_SET_STATUS_STR(511, "Network Authentication Required"),
   };
-  fio_str_info_s ret = (fio_str_info_s){.len = 0, .data = NULL};
+  fio_string_info_s ret = (fio_string_info_s){.len = 0, .data = NULL};
   if (status >= 100 &&
       (status - 100) < sizeof(status2str) / sizeof(status2str[0]))
     ret = status2str[status - 100];

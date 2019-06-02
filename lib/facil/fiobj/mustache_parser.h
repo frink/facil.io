@@ -39,7 +39,7 @@ Feel free to copy, use and enjoy according to the license provided.
 #endif
 
 #ifndef MUSTACHE_FUNC
-#define MUSTACHE_FUNC static __attribute__((unused))
+#define MUSTACHE_FUNCTION static __attribute__((unused))
 #endif
 
 /* *****************************************************************************
@@ -113,12 +113,12 @@ REQUIRED: Define INCLUDE_MUSTACHE_IMPLEMENTATION only in the implementation file
 Mustache API Functions and Arguments
 ***************************************************************************** */
 
-MUSTACHE_FUNC mustache_s *mustache_load(mustache_load_args_s args);
+MUSTACHE_FUNCTION mustache_s *mustache_load(mustache_load_args_s args);
 
 #define mustache_load(...) mustache_load((mustache_load_args_s){__VA_ARGS__})
 
 /** free the mustache template */
-inline MUSTACHE_FUNC void mustache_free(mustache_s *mustache) {
+inline MUSTACHE_FUNCTION void mustache_free(mustache_s *mustache) {
   free(mustache);
 }
 
@@ -139,7 +139,7 @@ typedef struct {
   /** Formatting error reporting (can be NULL). */
   mustache_error_en *err;
 } mustache_build_args_s;
-MUSTACHE_FUNC int mustache_build(mustache_build_args_s args);
+MUSTACHE_FUNCTION int mustache_build(mustache_build_args_s args);
 
 #define mustache_build(mustache_s_ptr, ...)                                    \
   mustache_build(                                                              \
@@ -1011,7 +1011,7 @@ Calling the instrustion list (using the template engine)
  * function keeps a stack of sorts. This allows the code to avoid recursion and
  * minimize any risk of stack overflow caused by recursive templates.
  */
-MUSTACHE_FUNC int(mustache_build)(mustache_build_args_s args) {
+MUSTACHE_FUNCTION int(mustache_build)(mustache_build_args_s args) {
   mustache_error_en err_if_missing;
   if (!args.err)
     args.err = &err_if_missing;
@@ -1159,7 +1159,7 @@ Building the instrustion list (parsing the template)
 ***************************************************************************** */
 
 /* The parsing implementation, converts a template to an instruction array */
-MUSTACHE_FUNC mustache_s *(mustache_load)(mustache_load_args_s args) {
+MUSTACHE_FUNCTION mustache_s *(mustache_load)(mustache_load_args_s args) {
   mustache_error_en err_if_missing;
   mustache__loader_stack_s s;
   uint8_t flag = 0;

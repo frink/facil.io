@@ -9,7 +9,7 @@ Feel free to copy, use and enjoy according to the license provided.
 
 #include <fio.h>
 /* subscription lists have a long lifetime */
-#define FIO_FORCE_MALLOC_TMP 1
+#define FIO_FORCE_MALLOC_TEMP 1
 #define FIO_INCLUDE_LINKED_LIST
 #include <fio.h>
 
@@ -48,7 +48,7 @@ struct http_vtable_s {
   /** Resumes a request / response handling. */
   void (*http_on_resume)(http_s *, http_fio_protocol_s *);
   /** hijacks the socket aaway from the protocol. */
-  intptr_t (*http_hijack)(http_s *h, fio_str_info_s *leftover);
+  intptr_t (*http_hijack)(http_s *h, fio_string_info_s *leftover);
 
   /** Upgrades an HTTP connection to an EventSource (SSE) connection. */
   int (*http_upgrade2sse)(http_s *h, http_sse_s *sse);
@@ -67,7 +67,7 @@ struct http_fio_protocol_s {
 #define http2protocol(h) ((http_fio_protocol_s *)h->private_data.flag)
 
 /* *****************************************************************************
-Constants that shouldn't be accessed by the users (`fiobj_dup` required).
+Constants that shouldn't be accessed by the users (`fiobj_duplicate` required).
 ***************************************************************************** */
 
 extern FIOBJ HTTP_HEADER_ACCEPT_RANGES;
@@ -214,20 +214,20 @@ static inline void set_header_add(FIOBJ hash, FIOBJ name, FIOBJ value) {
     return;
   }
   if (!FIOBJ_TYPE_IS(old, FIOBJ_T_ARRAY)) {
-    FIOBJ tmp = fiobj_ary_new();
-    fiobj_ary_push(tmp, old);
+    FIOBJ tmp = fiobj_array_new();
+    fiobj_array_push(tmp, old);
     old = tmp;
   }
   if (FIOBJ_TYPE_IS(value, FIOBJ_T_ARRAY)) {
-    for (size_t i = 0; i < fiobj_ary_count(value); ++i) {
-      fiobj_ary_push(old, fiobj_dup(fiobj_ary_index(value, i)));
+    for (size_t i = 0; i < fiobj_array_count(value); ++i) {
+      fiobj_array_push(old, fiobj_duplicate(fiobj_array_index(value, i)));
     }
     /* frees `value` */
     fiobj_hash_set(hash, name, old);
     return;
   }
   /* value will be owned by both hash and array */
-  fiobj_ary_push(old, value);
+  fiobj_array_push(old, value);
   /* don't free `value` (leave in array) */
   fiobj_hash_replace(hash, name, old);
 }

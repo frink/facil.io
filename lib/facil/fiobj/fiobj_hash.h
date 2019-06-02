@@ -19,7 +19,7 @@ License: MIT
 #include <fiobject.h>
 
 #include <fio_siphash.h>
-#include <fiobj_str.h>
+#include <fiobj_string.h>
 
 #include <errno.h>
 
@@ -61,7 +61,7 @@ Hash properties and state
  * Returns a temporary theoretical Hash map capacity.
  * This could be used for testing performance and memory consumption.
  */
-size_t fiobj_hash_capa(const FIOBJ hash);
+size_t fiobj_hash_capacity(const FIOBJ hash);
 
 /** Returns the number of elements in the Hash. */
 size_t fiobj_hash_count(const FIOBJ hash);

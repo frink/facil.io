@@ -19,7 +19,7 @@ FIOBJ HTTP_HEADER_X_DATA;
 // Listen to HTTP requests and start facil.io
 int main(int argc, char const **argv) {
   // allocating values we use often
-  HTTP_HEADER_X_DATA = fiobj_str_new("X-Data", 6);
+  HTTP_HEADER_X_DATA = fiobj_string_new("X-Data", 6);
   // listen on port 3000 and any available network binding (NULL == 0.0.0.0)
   http_listen("3000", NULL, .on_request = on_request, .log = 1);
   // start the server
@@ -36,7 +36,7 @@ void on_request(http_s *request) {
                   .value_len = 4);
   http_set_header(request, HTTP_HEADER_CONTENT_TYPE,
                   http_mimetype_find("txt", 3));
-  http_set_header(request, HTTP_HEADER_X_DATA, fiobj_str_new("my data", 7));
+  http_set_header(request, HTTP_HEADER_X_DATA, fiobj_string_new("my data", 7));
   http_send_body(request, "Hello World!\r\n", 14);
 }
 ```
@@ -67,7 +67,7 @@ Here's a simple WebSocket chat-room example:
 #include "http.h"
 
 /* Chat-room channel name */
-static fio_str_info_s CHAT_CHANNEL = {.len = 8, .data = "chatroom"};
+static fio_string_info_s CHAT_CHANNEL = {.len = 8, .data = "chatroom"};
 
 /* *****************************************************************************
 WebSocket callbacks
@@ -79,9 +79,9 @@ static void on_open_websocket(ws_s *ws) {
   websocket_subscribe(ws, .channel = CHAT_CHANNEL, .force_text = 1);
   /* notify everyone about new (named) visitors */
   FIOBJ nickname = (FIOBJ)websocket_udata_get(ws);
-  fio_str_info_s n = fiobj_obj2cstr(nickname);
-  FIOBJ msg = fiobj_str_new(n.data, n.len);
-  fiobj_str_write(msg, " joined the chat.", 17);
+  fio_string_info_s n = fiobj_obj2cstr(nickname);
+  FIOBJ msg = fiobj_string_new(n.data, n.len);
+  fiobj_string_write(msg, " joined the chat.", 17);
   pubsub_publish(.channel = CHAT_CHANNEL, .message = fiobj_obj2cstr(msg));
   /* cleanup */
   fiobj_free(msg);
@@ -90,10 +90,10 @@ static void on_open_websocket(ws_s *ws) {
 /* Free the nickname, if any. */
 static void on_close_websocket(intptr_t uuid, void *udata) {
   FIOBJ nickname = (FIOBJ)udata;
-  fio_str_info_s n = fiobj_obj2cstr(nickname);
+  fio_string_info_s n = fiobj_obj2cstr(nickname);
   /* send notification */
-  FIOBJ msg = fiobj_str_new(n.data, n.len);
-  fiobj_str_write(msg, " left the chat.", 15);
+  FIOBJ msg = fiobj_string_new(n.data, n.len);
+  fiobj_string_write(msg, " left the chat.", 15);
   fio_publish(.channel = CHAT_CHANNEL, .message = fiobj_obj2cstr(msg));
   /* cleanup */
   fiobj_free(msg);
@@ -102,15 +102,15 @@ static void on_close_websocket(intptr_t uuid, void *udata) {
 }
 
 /* Received a message from a client, format message for chat . */
-static void handle_websocket_messages(ws_s *ws, fio_str_info_s data,
+static void handle_websocket_messages(ws_s *ws, fio_string_info_s data,
                                       uint8_t is_text) {
   FIOBJ nickname = (FIOBJ)websocket_udata_get(ws);
-  fio_str_info_s n = fiobj_obj2cstr(nickname);
+  fio_string_info_s n = fiobj_obj2cstr(nickname);
   /* allocates a dynamic string. knowing the buffer size is faster */
-  FIOBJ msg = fiobj_str_buf(n.len + 2 + data.len);
-  fiobj_str_write(msg, n.data, n.len);
-  fiobj_str_write(msg, ": ", 2);
-  fiobj_str_write(msg, data.data, data.len);
+  FIOBJ msg = fiobj_string_buffer(n.len + 2 + data.len);
+  fiobj_string_write(msg, n.data, n.len);
+  fiobj_string_write(msg, ": ", 2);
+  fiobj_string_write(msg, data.data, data.len);
   fio_publish(.channel = CHAT_CHANNEL, .message = fiobj_obj2cstr(msg));
   fiobj_free(msg);
   (void)(ws);
@@ -123,8 +123,8 @@ HTTP Handling (Upgrading to WebSocket)
 
 /* Answers simple HTTP requests */
 static void answer_http_request(http_s *h) {
-  http_set_header2(h, (fio_str_info_s){.data = "Server", .len = 6},
-                   (fio_str_info_s){.data = "facil.example", .len = 13});
+  http_set_header2(h, (fio_string_info_s){.data = "Server", .len = 6},
+                   (fio_string_info_s){.data = "facil.example", .len = 13});
   http_set_header(h, HTTP_HEADER_CONTENT_TYPE, http_mimetype_find("txt", 3));
   /* this both sends the response and frees the http handler. */
   http_send_body(h, "This is a simple Websocket chatroom example.", 44);
@@ -138,11 +138,11 @@ static void answer_http_upgrade(http_s *h, char *target, size_t len) {
     return;
   }
   FIOBJ n;
-  fio_str_info_s path = fiobj_obj2cstr(h->path);
+  fio_string_info_s path = fiobj_obj2cstr(h->path);
   if (path.len > 1) {
-    n = fiobj_str_new(path.data + 1, path.len - 1);
+    n = fiobj_string_new(path.data + 1, path.len - 1);
   } else {
-    n = fiobj_str_new("Guest", 5);
+    n = fiobj_string_new("Guest", 5);
   }
   // Websocket upgrade will use our existing response.
   if (http_upgrade2ws(

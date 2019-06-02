@@ -30,7 +30,7 @@ void http_on_request_handler______internal(http_s *h,
     if (!tmp)
       goto missing_host;
     if (FIOBJ_TYPE_IS(tmp, FIOBJ_T_ARRAY)) {
-      fiobj_hash_set(h->headers, HTTP_HEADER_HOST, fiobj_ary_pop(tmp));
+      fiobj_hash_set(h->headers, HTTP_HEADER_HOST, fiobj_array_pop(tmp));
     }
   }
 
@@ -43,7 +43,7 @@ void http_on_request_handler______internal(http_s *h,
           HTTP_HVALUE_SSE_MIME))
     goto eventsource;
   if (settings->public_folder) {
-    fio_str_info_s path_str = fiobj_obj2cstr(h->path);
+    fio_string_info_s path_str = fiobj_obj2cstr(h->path);
     if (!http_sendfile2(h, settings->public_folder,
                         settings->public_folder_length, path_str.data,
                         path_str.len)) {
@@ -55,8 +55,8 @@ void http_on_request_handler______internal(http_s *h,
 
 upgrade:
   if (1) {
-    fiobj_dup(t); /* allow upgrade name access after http_finish */
-    fio_str_info_s val = fiobj_obj2cstr(t);
+    fiobj_duplicate(t); /* allow upgrade name access after http_finish */
+    fio_string_info_s val = fiobj_obj2cstr(t);
     if (val.data[0] == 'h' && val.data[1] == '2') {
       http_send_error(h, 400);
     } else {
@@ -84,7 +84,7 @@ void http_on_response_handler______internal(http_s *h,
     settings->on_response(h);
     return;
   } else {
-    fio_str_info_s val = fiobj_obj2cstr(t);
+    fio_string_info_s val = fiobj_obj2cstr(t);
     settings->on_upgrade(h, val.data, val.len);
   }
 }
@@ -196,37 +196,37 @@ static void http_lib_init(void *ignr_) {
   (void)ignr_;
   if (HTTP_HEADER_ACCEPT_RANGES)
     return;
-  HTTP_HEADER_ACCEPT = fiobj_str_new("accept", 6);
-  HTTP_HEADER_ACCEPT_RANGES = fiobj_str_new("accept-ranges", 13);
-  HTTP_HEADER_CACHE_CONTROL = fiobj_str_new("cache-control", 13);
-  HTTP_HEADER_CONNECTION = fiobj_str_new("connection", 10);
-  HTTP_HEADER_CONTENT_ENCODING = fiobj_str_new("content-encoding", 16);
-  HTTP_HEADER_CONTENT_LENGTH = fiobj_str_new("content-length", 14);
-  HTTP_HEADER_CONTENT_RANGE = fiobj_str_new("content-range", 13);
-  HTTP_HEADER_CONTENT_TYPE = fiobj_str_new("content-type", 12);
-  HTTP_HEADER_COOKIE = fiobj_str_new("cookie", 6);
-  HTTP_HEADER_DATE = fiobj_str_new("date", 4);
-  HTTP_HEADER_ETAG = fiobj_str_new("etag", 4);
-  HTTP_HEADER_HOST = fiobj_str_new("host", 4);
-  HTTP_HEADER_LAST_MODIFIED = fiobj_str_new("last-modified", 13);
-  HTTP_HEADER_ORIGIN = fiobj_str_new("origin", 6);
-  HTTP_HEADER_SET_COOKIE = fiobj_str_new("set-cookie", 10);
-  HTTP_HEADER_UPGRADE = fiobj_str_new("upgrade", 7);
-  HTTP_HEADER_WS_SEC_CLIENT_KEY = fiobj_str_new("sec-websocket-key", 17);
-  HTTP_HEADER_WS_SEC_KEY = fiobj_str_new("sec-websocket-accept", 20);
-  HTTP_HVALUE_BYTES = fiobj_str_new("bytes", 5);
-  HTTP_HVALUE_CLOSE = fiobj_str_new("close", 5);
+  HTTP_HEADER_ACCEPT = fiobj_string_new("accept", 6);
+  HTTP_HEADER_ACCEPT_RANGES = fiobj_string_new("accept-ranges", 13);
+  HTTP_HEADER_CACHE_CONTROL = fiobj_string_new("cache-control", 13);
+  HTTP_HEADER_CONNECTION = fiobj_string_new("connection", 10);
+  HTTP_HEADER_CONTENT_ENCODING = fiobj_string_new("content-encoding", 16);
+  HTTP_HEADER_CONTENT_LENGTH = fiobj_string_new("content-length", 14);
+  HTTP_HEADER_CONTENT_RANGE = fiobj_string_new("content-range", 13);
+  HTTP_HEADER_CONTENT_TYPE = fiobj_string_new("content-type", 12);
+  HTTP_HEADER_COOKIE = fiobj_string_new("cookie", 6);
+  HTTP_HEADER_DATE = fiobj_string_new("date", 4);
+  HTTP_HEADER_ETAG = fiobj_string_new("etag", 4);
+  HTTP_HEADER_HOST = fiobj_string_new("host", 4);
+  HTTP_HEADER_LAST_MODIFIED = fiobj_string_new("last-modified", 13);
+  HTTP_HEADER_ORIGIN = fiobj_string_new("origin", 6);
+  HTTP_HEADER_SET_COOKIE = fiobj_string_new("set-cookie", 10);
+  HTTP_HEADER_UPGRADE = fiobj_string_new("upgrade", 7);
+  HTTP_HEADER_WS_SEC_CLIENT_KEY = fiobj_string_new("sec-websocket-key", 17);
+  HTTP_HEADER_WS_SEC_KEY = fiobj_string_new("sec-websocket-accept", 20);
+  HTTP_HVALUE_BYTES = fiobj_string_new("bytes", 5);
+  HTTP_HVALUE_CLOSE = fiobj_string_new("close", 5);
   HTTP_HVALUE_CONTENT_TYPE_DEFAULT =
-      fiobj_str_new("application/octet-stream", 24);
-  HTTP_HVALUE_GZIP = fiobj_str_new("gzip", 4);
-  HTTP_HVALUE_KEEP_ALIVE = fiobj_str_new("keep-alive", 10);
-  HTTP_HVALUE_MAX_AGE = fiobj_str_new("max-age=3600", 12);
-  HTTP_HVALUE_NO_CACHE = fiobj_str_new("no-cache, max-age=0", 19);
-  HTTP_HVALUE_SSE_MIME = fiobj_str_new("text/event-stream", 17);
-  HTTP_HVALUE_WEBSOCKET = fiobj_str_new("websocket", 9);
-  HTTP_HVALUE_WS_SEC_VERSION = fiobj_str_new("sec-websocket-version", 21);
-  HTTP_HVALUE_WS_UPGRADE = fiobj_str_new("Upgrade", 7);
-  HTTP_HVALUE_WS_VERSION = fiobj_str_new("13", 2);
+      fiobj_string_new("application/octet-stream", 24);
+  HTTP_HVALUE_GZIP = fiobj_string_new("gzip", 4);
+  HTTP_HVALUE_KEEP_ALIVE = fiobj_string_new("keep-alive", 10);
+  HTTP_HVALUE_MAX_AGE = fiobj_string_new("max-age=3600", 12);
+  HTTP_HVALUE_NO_CACHE = fiobj_string_new("no-cache, max-age=0", 19);
+  HTTP_HVALUE_SSE_MIME = fiobj_string_new("text/event-stream", 17);
+  HTTP_HVALUE_WEBSOCKET = fiobj_string_new("websocket", 9);
+  HTTP_HVALUE_WS_SEC_VERSION = fiobj_string_new("sec-websocket-version", 21);
+  HTTP_HVALUE_WS_UPGRADE = fiobj_string_new("Upgrade", 7);
+  HTTP_HVALUE_WS_VERSION = fiobj_string_new("13", 2);
 
   fiobj_obj2hash(HTTP_HEADER_ACCEPT_RANGES);
   fiobj_obj2hash(HTTP_HEADER_CACHE_CONTROL);
@@ -260,7 +260,7 @@ static void http_lib_init(void *ignr_) {
 
 #define REGISTER_MIME(ext, type)                                               \
   http_mimetype_register((char *)ext, sizeof(ext) - 1,                         \
-                         fiobj_str_new((char *)type, sizeof(type) - 1))
+                         fiobj_string_new((char *)type, sizeof(type) - 1))
 
   REGISTER_MIME("123", "application/vnd.lotus-1-2-3");
   REGISTER_MIME("3dml", "text/vnd.in3d.3dml");

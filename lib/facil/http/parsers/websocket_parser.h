@@ -27,7 +27,7 @@ API - Message Wrapping
 
 /** returns the length of the buffer required to wrap a message `len` long */
 static inline __attribute__((unused)) uint64_t
-websocket_wrapped_len(uint64_t len);
+websocket_wrapped_length(uint64_t len);
 
 /**
  * Wraps a WebSocket server message and writes it to the target buffer.
@@ -52,7 +52,7 @@ websocket_wrapped_len(uint64_t len);
  * *  %xA denotes a pong
  * *  %xB-F are reserved for further control frames
  *
- * Returns the number of bytes written. Always `websocket_wrapped_len(len)`
+ * Returns the number of bytes written. Always `websocket_wrapped_length(len)`
  */
 inline static uint64_t __attribute__((unused))
 websocket_server_wrap(void *target, void *msg, uint64_t len,
@@ -72,7 +72,7 @@ websocket_server_wrap(void *target, void *msg, uint64_t len,
  * * last:   set to 1 if `msg + len` ends the message.
  * * client: set to 1 to use client mode (data  masking).
  *
- * Returns the number of bytes written. Always `websocket_wrapped_len(len) + 4`
+ * Returns the number of bytes written. Always `websocket_wrapped_length(len) + 4`
  */
 inline static __attribute__((unused)) uint64_t
 websocket_client_wrap(void *target, void *msg, uint64_t len,
@@ -222,12 +222,12 @@ Message wrapping
 ***************************************************************************** */
 
 /** Converts an unaligned network ordered byte stream to a 16 bit number. */
-#define websocket_str2u16(c)                                                   \
+#define websocket_string_to_u16(c)                                                   \
   ((uint16_t)(((uint16_t)(((uint8_t *)(c))[0]) << 8) |                         \
               (uint16_t)(((uint8_t *)(c))[1])))
 
 /** Converts an unaligned network ordered byte stream to a 64 bit number. */
-#define websocket_str2u64(c)                                                   \
+#define websocket_string_to_u64(c)                                                   \
   ((uint64_t)((((uint64_t)((uint8_t *)(c))[0]) << 56) |                        \
               (((uint64_t)((uint8_t *)(c))[1]) << 48) |                        \
               (((uint64_t)((uint8_t *)(c))[2]) << 40) |                        \
@@ -257,7 +257,7 @@ Message wrapping
   } while (0);
 
 /** returns the length of the buffer required to wrap a message `len` long */
-static inline uint64_t websocket_wrapped_len(uint64_t len) {
+static inline uint64_t websocket_wrapped_length(uint64_t len) {
   if (len < 126)
     return len + 2;
   if (len < (1UL << 16))
@@ -288,7 +288,7 @@ static inline uint64_t websocket_wrapped_len(uint64_t len) {
  * *  %xA denotes a pong
  * *  %xB-F are reserved for further control frames
  *
- * Returns the number of bytes written. Always `websocket_wrapped_len(len)`
+ * Returns the number of bytes written. Always `websocket_wrapped_length(len)`
  */
 static uint64_t websocket_server_wrap(void *target, void *msg, uint64_t len,
                                       unsigned char opcode, unsigned char first,
@@ -327,7 +327,7 @@ static uint64_t websocket_server_wrap(void *target, void *msg, uint64_t len,
  * * first:  set to 1 if `msg` points the beginning of the message.
  * * last:   set to 1 if `msg + len` ends the message.
  *
- * Returns the number of bytes written. Always `websocket_wrapped_len(len) +
+ * Returns the number of bytes written. Always `websocket_wrapped_length(len) +
  * 4`
  */
 static uint64_t websocket_client_wrap(void *target, void *msg, uint64_t len,
@@ -397,14 +397,14 @@ websocket_buffer_peek(void *buffer, uint64_t len) {
     if (len < 4)
       return (struct websocket_packet_info_s){0, (uint8_t)(4 + mask_l), mask_f};
     return (struct websocket_packet_info_s){
-        (uint64_t)websocket_str2u16(((uint8_t *)buffer + 2)),
+        (uint64_t)websocket_string_to_u16(((uint8_t *)buffer + 2)),
         (uint8_t)(4 + mask_l), mask_f};
   case 127:
     if (len < 10)
       return (struct websocket_packet_info_s){0, (uint8_t)(10 + mask_l),
                                               mask_f};
     {
-      uint64_t msg_len = websocket_str2u64(((uint8_t *)buffer + 2));
+      uint64_t msg_len = websocket_string_to_u64(((uint8_t *)buffer + 2));
       if (msg_len >> 62)
         return (struct websocket_packet_info_s){0, 0, 0};
       return (struct websocket_packet_info_s){msg_len, (uint8_t)(10 + mask_l),

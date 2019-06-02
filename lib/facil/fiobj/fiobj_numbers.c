@@ -45,22 +45,22 @@ static double fio_f2f(const FIOBJ o) { return obj2float(o)->f; }
 static size_t fio_itrue(const FIOBJ o) { return (obj2num(o)->i != 0); }
 static size_t fio_ftrue(const FIOBJ o) { return (obj2float(o)->f != 0); }
 
-static fio_str_info_s fio_i2str(const FIOBJ o) {
-  return (fio_str_info_s){
+static fio_string_info_s fio_i2str(const FIOBJ o) {
+  return (fio_string_info_s){
       .data = num_buffer,
       .len = fio_ltoa(num_buffer, obj2num(o)->i, 10),
   };
 }
-static fio_str_info_s fio_f2str(const FIOBJ o) {
+static fio_string_info_s fio_f2str(const FIOBJ o) {
   if (isnan(obj2float(o)->f))
-    return (fio_str_info_s){.data = (char *)"NaN", .len = 3};
+    return (fio_string_info_s){.data = (char *)"NaN", .len = 3};
   else if (isinf(obj2float(o)->f)) {
     if (obj2float(o)->f > 0)
-      return (fio_str_info_s){.data = (char *)"Infinity", .len = 8};
+      return (fio_string_info_s){.data = (char *)"Infinity", .len = 8};
     else
-      return (fio_str_info_s){.data = (char *)"-Infinity", .len = 9};
+      return (fio_string_info_s){.data = (char *)"-Infinity", .len = 9};
   }
-  return (fio_str_info_s){
+  return (fio_string_info_s){
       .data = num_buffer,
       .len = fio_ftoa(num_buffer, obj2float(o)->f, 10),
   };
@@ -184,12 +184,12 @@ Numbers to Strings - Buffered
 
 static __thread char num_buffer[512];
 
-fio_str_info_s fio_ltocstr(long i) {
-  return (fio_str_info_s){.data = num_buffer,
+fio_string_info_s fio_ltocstr(long i) {
+  return (fio_string_info_s){.data = num_buffer,
                           .len = fio_ltoa(num_buffer, i, 10)};
 }
-fio_str_info_s fio_ftocstr(double f) {
-  return (fio_str_info_s){.data = num_buffer,
+fio_string_info_s fio_ftocstr(double f) {
+  return (fio_string_info_s){.data = num_buffer,
                           .len = fio_ftoa(num_buffer, f, 10)};
 }
 

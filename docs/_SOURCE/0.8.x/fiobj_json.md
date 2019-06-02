@@ -56,7 +56,7 @@ int main(int argc, char const *argv[]) {
   }
 
   // Example use - printing some JSON data
-  FIOBJ key = fiobj_str_new("number", 6);
+  FIOBJ key = fiobj_string_new("number", 6);
   if (FIOBJ_TYPE_IS(obj, FIOBJ_T_HASH) // make sure the JSON object is a Hash
       && fiobj_hash_get(obj, key)) {   // test for the existence of "number"
     printf("JSON print example - the meaning of life is %zu",

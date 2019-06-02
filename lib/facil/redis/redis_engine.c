@@ -7,8 +7,8 @@ Feel free to copy, use and enjoy according to the license provided.
 
 #define FIO_INCLUDE_LINKED_LIST
 #include <fio.h>
-#define FIO_STR_NAME fio_str
-#define FIO_REF_NAME fio_str
+#define FIO_STRING_NAME fio_str
+#define FIO_REFERENCE_NAME fio_str
 #include <fio-stl.h>
 
 #include <fiobj.h>
@@ -108,33 +108,33 @@ Simple RESP formatting
 ***************************************************************************** */
 
 inline static void fiobj2resp___internal(FIOBJ dest, FIOBJ obj) {
-  fio_str_info_s s;
+  fio_string_info_s s;
   switch (FIOBJ_TYPE(obj)) {
   case FIOBJ_T_NULL:
-    fiobj_str_write(dest, "$-1\r\n", 5);
+    fiobj_string_write(dest, "$-1\r\n", 5);
     break;
   case FIOBJ_T_ARRAY:
-    fiobj_str_write(dest, "*", 1);
-    fiobj_str_write_i(dest, fiobj_ary_count(obj));
-    fiobj_str_write(dest, "\r\n", 2);
+    fiobj_string_write(dest, "*", 1);
+    fiobj_string_write_i(dest, fiobj_array_count(obj));
+    fiobj_string_write(dest, "\r\n", 2);
     break;
   case FIOBJ_T_HASH:
-    fiobj_str_write(dest, "*", 1);
-    fiobj_str_write_i(dest, fiobj_hash_count(obj) * 2);
-    fiobj_str_write(dest, "\r\n", 2);
+    fiobj_string_write(dest, "*", 1);
+    fiobj_string_write_i(dest, fiobj_hash_count(obj) * 2);
+    fiobj_string_write(dest, "\r\n", 2);
     break;
   case FIOBJ_T_TRUE:
-    fiobj_str_write(dest, "$4\r\ntrue\r\n", 10);
+    fiobj_string_write(dest, "$4\r\ntrue\r\n", 10);
     break;
   case FIOBJ_T_FALSE:
-    fiobj_str_write(dest, "$4\r\nfalse\r\n", 11);
+    fiobj_string_write(dest, "$4\r\nfalse\r\n", 11);
     break;
 #if 0
     /* Numbers aren't as good for commands as one might think... */
   case FIOBJ_T_NUMBER:
-    fiobj_str_write(dest, ":", 1);
-    fiobj_str_write_i(dest, fiobj_obj2num(obj));
-    fiobj_str_write(dest, "\r\n", 2);
+    fiobj_string_write(dest, ":", 1);
+    fiobj_string_write_i(dest, fiobj_obj2num(obj));
+    fiobj_string_write(dest, "\r\n", 2);
     break;
 #else
   case FIOBJ_T_NUMBER: /* overflow */
@@ -144,11 +144,11 @@ inline static void fiobj2resp___internal(FIOBJ dest, FIOBJ obj) {
   case FIOBJ_T_STRING:  /* overflow */
   case FIOBJ_T_DATA:
     s = fiobj_obj2cstr(obj);
-    fiobj_str_write(dest, "$", 1);
-    fiobj_str_write_i(dest, s.len);
-    fiobj_str_write(dest, "\r\n", 2);
-    fiobj_str_write(dest, s.data, s.len);
-    fiobj_str_write(dest, "\r\n", 2);
+    fiobj_string_write(dest, "$", 1);
+    fiobj_string_write_i(dest, s.len);
+    fiobj_string_write(dest, "\r\n", 2);
+    fiobj_string_write(dest, s.data, s.len);
+    fiobj_string_write(dest, "\r\n", 2);
     break;
   }
 }
@@ -174,7 +174,7 @@ static FIOBJ fiobj2resp(FIOBJ dest, FIOBJ obj) {
  * Don't call `fiobj_free`, object will self-destruct.
  */
 static inline FIOBJ fiobj2resp_tmp(FIOBJ obj) {
-  return fiobj2resp(fiobj_str_tmp(), obj);
+  return fiobj2resp(fiobj_string_tmp(), obj);
 }
 
 /* *****************************************************************************
@@ -204,13 +204,13 @@ static int resp_on_message(resp_parser_s *parser) {
 /** a local helper to add parsed objects to the data store. */
 static inline void resp_add_obj(struct redis_engine_internal_s *dest, FIOBJ o) {
   if (dest->ary) {
-    fiobj_ary_push(dest->ary, o);
+    fiobj_array_push(dest->ary, o);
     --dest->ary_count;
     if (!dest->ary_count && dest->nesting) {
-      FIOBJ tmp = fiobj_ary_shift(dest->ary);
+      FIOBJ tmp = fiobj_array_shift(dest->ary);
       dest->ary_count = fiobj_obj2num(tmp);
       fiobj_free(tmp);
-      dest->ary = fiobj_ary_shift(dest->ary);
+      dest->ary = fiobj_array_shift(dest->ary);
       --dest->nesting;
     }
   }
@@ -246,13 +246,13 @@ static int resp_on_null(resp_parser_s *parser) {
  */
 static int resp_on_start_string(resp_parser_s *parser, size_t str_len) {
   struct redis_engine_internal_s *data = parser2data(parser);
-  resp_add_obj(data, fiobj_str_buf(str_len));
+  resp_add_obj(data, fiobj_string_buffer(str_len));
   return 0;
 }
 /** a local static callback, called as String objects are streamed. */
 static int resp_on_string_chunk(resp_parser_s *parser, void *data, size_t len) {
   struct redis_engine_internal_s *i = parser2data(parser);
-  fiobj_str_write(i->str, data, len);
+  fiobj_string_write(i->str, data, len);
   return 0;
 }
 /** a local static callback, called when a String object had finished
@@ -266,7 +266,7 @@ static int resp_on_end_string(resp_parser_s *parser) {
 /** a local static callback, called an error message is received. */
 static int resp_on_err_msg(resp_parser_s *parser, void *data, size_t len) {
   struct redis_engine_internal_s *i = parser2data(parser);
-  resp_add_obj(i, fiobj_str_new(data, len));
+  resp_add_obj(i, fiobj_string_new(data, len));
   return 0;
 }
 
@@ -287,12 +287,12 @@ static int resp_on_start_array(resp_parser_s *parser, size_t array_len) {
   struct redis_engine_internal_s *i = parser2data(parser);
   if (i->ary) {
     ++i->nesting;
-    FIOBJ tmp = fiobj_ary_new2(array_len + 2);
-    fiobj_ary_push(tmp, fiobj_num_new(i->ary_count));
-    fiobj_ary_push(tmp, fiobj_num_new(i->ary));
+    FIOBJ tmp = fiobj_array_new2(array_len + 2);
+    fiobj_array_push(tmp, fiobj_num_new(i->ary_count));
+    fiobj_array_push(tmp, fiobj_num_new(i->ary));
     i->ary = tmp;
   } else {
-    i->ary = fiobj_ary_new2(array_len + 2);
+    i->ary = fiobj_array_new2(array_len + 2);
   }
   i->ary_count = array_len;
   return 0;
@@ -377,22 +377,22 @@ static void resp_on_sub_message(struct redis_engine_internal_s *i, FIOBJ msg) {
                       fiobj_obj2cstr(msg).len, fiobj_obj2cstr(msg).data);
     }
   } else {
-    // FIOBJ *ary = fiobj_ary2ptr(msg);
-    // for (size_t i = 0; i < fiobj_ary_count(msg); ++i) {
-    //   fio_str_info_s tmp = fiobj_obj2cstr(ary[i]);
+    // FIOBJ *ary = fiobj_array_to_pointer(msg);
+    // for (size_t i = 0; i < fiobj_array_count(msg); ++i) {
+    //   fio_string_info_s tmp = fiobj_obj2cstr(ary[i]);
     //   fprintf(stderr, "(%lu) %s\n", (unsigned long)i, tmp.data);
     // }
-    fio_str_info_s tmp = fiobj_obj2cstr(fiobj_ary_index(msg, 0));
+    fio_string_info_s tmp = fiobj_obj2cstr(fiobj_array_index(msg, 0));
     if (tmp.len == 7) { /* "message"  */
       fiobj_free(r->last_ch);
-      r->last_ch = fiobj_dup(fiobj_ary_index(msg, 1));
+      r->last_ch = fiobj_dup(fiobj_array_index(msg, 1));
       fio_publish(.channel = fiobj_obj2cstr(r->last_ch),
-                  .message = fiobj_obj2cstr(fiobj_ary_index(msg, 2)),
+                  .message = fiobj_obj2cstr(fiobj_array_index(msg, 2)),
                   .engine = FIO_PUBSUB_CLUSTER);
     } else if (tmp.len == 8) { /* "pmessage" */
-      if (!fiobj_iseq(r->last_ch, fiobj_ary_index(msg, 2)))
-        fio_publish(.channel = fiobj_obj2cstr(fiobj_ary_index(msg, 2)),
-                    .message = fiobj_obj2cstr(fiobj_ary_index(msg, 3)),
+      if (!fiobj_iseq(r->last_ch, fiobj_array_index(msg, 2)))
+        fio_publish(.channel = fiobj_obj2cstr(fiobj_array_index(msg, 2)),
+                    .message = fiobj_obj2cstr(fiobj_array_index(msg, 3)),
                     .engine = FIO_PUBSUB_CLUSTER);
     }
   }
@@ -505,7 +505,7 @@ Connecting to Redis
 
 static void redis_on_auth(fio_pubsub_engine_s *e, FIOBJ reply, void *udata) {
   if (FIOBJ_TYPE_IS(reply, FIOBJ_T_TRUE)) {
-    fio_str_info_s s = fiobj_obj2cstr(reply);
+    fio_string_info_s s = fiobj_obj2cstr(reply);
     FIO_LOG_WARNING("(redis) Authentication FAILED."
                     "        %.*s",
                     (int)s.len, s.data);
@@ -588,21 +588,21 @@ Engine / Bridge Callbacks (Root Process)
 ***************************************************************************** */
 
 static void redis_on_subscribe_root(const fio_pubsub_engine_s *eng,
-                                    fio_str_info_s channel,
+                                    fio_string_info_s channel,
                                     fio_match_fn match) {
   redis_engine_s *r = (redis_engine_s *)eng;
   if (r->sub_data.uuid != -1) {
-    FIOBJ cmd = fiobj_str_buf(96 + channel.len);
+    FIOBJ cmd = fiobj_string_buf(96 + channel.len);
     if (match == FIO_MATCH_GLOB)
-      fiobj_str_write(cmd, "*2\r\n$10\r\nPSUBSCRIBE\r\n$", 22);
+      fiobj_string_write(cmd, "*2\r\n$10\r\nPSUBSCRIBE\r\n$", 22);
     else
-      fiobj_str_write(cmd, "*2\r\n$9\r\nSUBSCRIBE\r\n$", 20);
-    fiobj_str_write_i(cmd, channel.len);
-    fiobj_str_write(cmd, "\r\n", 2);
-    fiobj_str_write(cmd, channel.data, channel.len);
-    fiobj_str_write(cmd, "\r\n", 2);
+      fiobj_string_write(cmd, "*2\r\n$9\r\nSUBSCRIBE\r\n$", 20);
+    fiobj_string_write_i(cmd, channel.len);
+    fiobj_string_write(cmd, "\r\n", 2);
+    fiobj_string_write(cmd, channel.data, channel.len);
+    fiobj_string_write(cmd, "\r\n", 2);
     // {
-    //   fio_str_info_s s = fiobj_obj2cstr(cmd);
+    //   fio_string_info_s s = fiobj_obj2cstr(cmd);
     //   fprintf(stderr, "(%d) Sending Subscription (%p):\n%s\n", getpid(),
     //           (void *)r->sub_data.uuid, s.data);
     // }
@@ -611,35 +611,35 @@ static void redis_on_subscribe_root(const fio_pubsub_engine_s *eng,
 }
 
 static void redis_on_unsubscribe_root(const fio_pubsub_engine_s *eng,
-                                      fio_str_info_s channel,
+                                      fio_string_info_s channel,
                                       fio_match_fn match) {
   redis_engine_s *r = (redis_engine_s *)eng;
   if (r->sub_data.uuid != -1) {
-    fio_str_s *cmd = fio_str_new2();
-    fio_str_reserve(cmd, 96 + channel.len);
+    fio_string_s *cmd = fio_string_new2();
+    fio_string_reserve(cmd, 96 + channel.len);
     if (match == FIO_MATCH_GLOB)
-      fio_str_write(cmd, "*2\r\n$12\r\nPUNSUBSCRIBE\r\n$", 24);
+      fio_string_write(cmd, "*2\r\n$12\r\nPUNSUBSCRIBE\r\n$", 24);
     else
-      fio_str_write(cmd, "*2\r\n$11\r\nUNSUBSCRIBE\r\n$", 23);
-    fio_str_write_i(cmd, channel.len);
-    fio_str_write(cmd, "\r\n", 2);
-    fio_str_write(cmd, channel.data, channel.len);
-    fio_str_write(cmd, "\r\n", 2);
+      fio_string_write(cmd, "*2\r\n$11\r\nUNSUBSCRIBE\r\n$", 23);
+    fio_string_write_i(cmd, channel.len);
+    fio_string_write(cmd, "\r\n", 2);
+    fio_string_write(cmd, channel.data, channel.len);
+    fio_string_write(cmd, "\r\n", 2);
     // {
-    //   fio_str_info_s s = fio_str_info(cmd);
+    //   fio_string_info_s s = fio_string_info(cmd);
     //   fprintf(stderr, "(%d) Cancel Subscription (%p):\n%s\n", getpid(),
     //           (void *)r->sub_data.uuid, s.data);
     // }
     fio_write2(r->sub_data.uuid, .data.buffer = (char *)cmd,
-               .offset = ((char *)cmd - fio_str_data(cmd)),
-               .length = fio_str_len(cmd),
-               .after.dealloc = (void (*)(void *))fio_str_free2);
-    // fio_str_send_free2(r->sub_data.uuid, cmd);
+               .offset = ((char *)cmd - fio_string_data(cmd)),
+               .length = fio_string_length(cmd),
+               .after.dealloc = (void (*)(void *))fio_string_free2);
+    // fio_string_send_free2(r->sub_data.uuid, cmd);
   }
 }
 
 static void redis_on_publish_root(const fio_pubsub_engine_s *eng,
-                                  fio_str_info_s channel, fio_str_info_s msg,
+                                  fio_string_info_s channel, fio_string_info_s msg,
                                   uint8_t is_json) {
   redis_engine_s *r = (redis_engine_s *)eng;
   redis_commands_s *cmd = fio_malloc(sizeof(*cmd) + channel.len + msg.len + 96);
@@ -674,7 +674,7 @@ Engine / Bridge Stub Callbacks (Child Process)
 ***************************************************************************** */
 
 static void redis_on_mock_subscribe_child(const fio_pubsub_engine_s *eng,
-                                          fio_str_info_s channel,
+                                          fio_string_info_s channel,
                                           fio_match_fn match) {
   /* do nothing, root process is notified about (un)subscriptions by facil.io */
   (void)eng;
@@ -683,18 +683,18 @@ static void redis_on_mock_subscribe_child(const fio_pubsub_engine_s *eng,
 }
 
 static void redis_on_publish_child(const fio_pubsub_engine_s *eng,
-                                   fio_str_info_s channel, fio_str_info_s msg,
+                                   fio_string_info_s channel, fio_string_info_s msg,
                                    uint8_t is_json) {
   /* attach engine data to channel (prepend) */
-  fio_str_s tmp = FIO_STR_INIT;
-  /* by using fio_str_s, short names are allocated on the stack */
-  fio_str_info_s tmp_info = fio_str_resize(&tmp, channel.len + 8);
+  fio_string_s tmp = FIO_STRING_INIT;
+  /* by using fio_string_s, short names are allocated on the stack */
+  fio_string_info_s tmp_info = fio_string_resize(&tmp, channel.len + 8);
   fio_u2str64(tmp_info.data, (uint64_t)eng);
   memcpy(tmp_info.data + 8, channel.data, channel.len);
   /* forward publication request to Root */
   fio_publish(.filter = -1, .channel = tmp_info, .message = msg,
               .engine = FIO_PUBSUB_ROOT, .is_json = is_json);
-  fio_str_destroy(&tmp);
+  fio_string_destroy(&tmp);
   (void)eng;
 }
 
@@ -706,7 +706,7 @@ Root Publication Handler
 static void redis_on_internal_publish(fio_msg_s *msg) {
   if (msg->channel.len < 8)
     return; /* internal error, unexpected data */
-  void *en = (void *)fio_str2u64(msg->channel.data);
+  void *en = (void *)fio_string_to_u64(msg->channel.data);
   if (en != msg->udata1)
     return; /* should be delivered by a different engine */
   /* step after the engine data */
@@ -726,13 +726,13 @@ Sending commands using the Root connection
 static void redis_forward_reply(fio_pubsub_engine_s *e, FIOBJ reply,
                                 void *udata) {
   uint8_t *data = udata;
-  fio_pubsub_engine_s *engine = (fio_pubsub_engine_s *)fio_str2u64(data + 0);
-  void *callback = (void *)fio_str2u64(data + 8);
+  fio_pubsub_engine_s *engine = (fio_pubsub_engine_s *)fio_string_to_u64(data + 0);
+  void *callback = (void *)fio_string_to_u64(data + 8);
   if (engine != e || !callback) {
     FIO_LOG_DEBUG("Redis reply not forwarded (callback: %p)", callback);
     return;
   }
-  int32_t pid = (int32_t)fio_str2u32(data + 24);
+  int32_t pid = (int32_t)fio_string_to_u32(data + 24);
   FIOBJ rp = fiobj_obj2json(reply, 0);
   fio_publish(.filter = (-10 - (int32_t)pid), .channel.data = (char *)data,
               .channel.len = 28, .message = fiobj_obj2cstr(rp), .is_json = 1);
@@ -741,9 +741,9 @@ static void redis_forward_reply(fio_pubsub_engine_s *e, FIOBJ reply,
 
 /* listens to channel -2 for commands that need to be sent (only ROOT) */
 static void redis_on_internal_cmd(fio_msg_s *msg) {
-  // void*(void *)fio_str2u64(msg->msg.data);
+  // void*(void *)fio_string_to_u64(msg->msg.data);
   fio_pubsub_engine_s *engine =
-      (fio_pubsub_engine_s *)fio_str2u64(msg->channel.data + 0);
+      (fio_pubsub_engine_s *)fio_string_to_u64(msg->channel.data + 0);
   if (engine != msg->udata1) {
     return;
   }
@@ -761,7 +761,7 @@ static void redis_on_internal_cmd(fio_msg_s *msg) {
 /* Listens on filter `-10 -getpid()` for incoming reply data */
 static void redis_on_internal_reply(fio_msg_s *msg) {
   fio_pubsub_engine_s *engine =
-      (fio_pubsub_engine_s *)fio_str2u64(msg->channel.data + 0);
+      (fio_pubsub_engine_s *)fio_string_to_u64(msg->channel.data + 0);
   if (engine != msg->udata1) {
     FIO_LOG_DEBUG("Redis reply not forwarded (engine mismatch: %p != %p)",
                   (void *)engine, msg->udata1);
@@ -770,8 +770,8 @@ static void redis_on_internal_reply(fio_msg_s *msg) {
   FIOBJ reply;
   fiobj_json2obj(&reply, msg->msg.data, msg->msg.len);
   void (*callback)(fio_pubsub_engine_s *, FIOBJ, void *) = (void (*)(
-      fio_pubsub_engine_s *, FIOBJ, void *))fio_str2u64(msg->channel.data + 8);
-  void *udata = (void *)fio_str2u64(msg->channel.data + 16);
+      fio_pubsub_engine_s *, FIOBJ, void *))fio_string_to_u64(msg->channel.data + 8);
+  void *udata = (void *)fio_string_to_u64(msg->channel.data + 16);
   callback(engine, reply, udata);
   fiobj_free(reply);
 }
@@ -786,12 +786,12 @@ intptr_t redis_engine_send(fio_pubsub_engine_s *engine, FIOBJ command,
     return -1;
   }
   // if(fio_is_master()) {
-  // FIOBJ resp = fiobj2resp_tmp(fio_str_info_s obj1, FIOBJ obj2);
+  // FIOBJ resp = fiobj2resp_tmp(fio_string_info_s obj1, FIOBJ obj2);
   // TODO...
   // } else {
   /* forward publication request to Root */
-  fio_str_s tmp = FIO_STR_INIT;
-  fio_str_info_s ti = fio_str_resize(&tmp, 28);
+  fio_string_s tmp = FIO_STRING_INIT;
+  fio_string_info_s ti = fio_string_resize(&tmp, 28);
   /* combine metadata */
   fio_u2str64(ti.data + 0, (uint64_t)engine);
   fio_u2str64(ti.data + 8, (uint64_t)callback);
@@ -800,7 +800,7 @@ intptr_t redis_engine_send(fio_pubsub_engine_s *engine, FIOBJ command,
   FIOBJ cmd = fiobj2resp_tmp(command);
   fio_publish(.filter = -2, .channel = ti, .message = fiobj_obj2cstr(cmd),
               .engine = FIO_PUBSUB_ROOT, .is_json = 0);
-  fio_str_destroy(&tmp);
+  fio_string_destroy(&tmp);
   // }
   return 0;
 }
@@ -867,10 +867,10 @@ FIO_IGNORE_MACRO(struct redis_engine_create_args args) {
   }
 
   if (!args.address.data || !args.address.len) {
-    args.address = (fio_str_info_s){.len = 9, .data = (char *)"localhost"};
+    args.address = (fio_string_info_s){.len = 9, .data = (char *)"localhost"};
   }
   if (!args.port.data || !args.port.len) {
-    args.port = (fio_str_info_s){.len = 4, .data = (char *)"6379"};
+    args.port = (fio_string_info_s){.len = 4, .data = (char *)"6379"};
   }
   redis_engine_s *r =
       fio_malloc(sizeof(*r) + args.port.len + 1 + args.address.len + 1 +

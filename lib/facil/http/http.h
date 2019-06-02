@@ -86,7 +86,7 @@ typedef struct {
   /** a String containing the method data (supports non-standard methods. */
   FIOBJ method;
   /** The status string, for response objects (client mode response). */
-  FIOBJ status_str;
+  FIOBJ status_string;
   /** The HTTP version string, if any. */
   FIOBJ version;
   /** The status used for the response (or if the object is a response).
@@ -168,7 +168,7 @@ int http_set_header(http_s *h, FIOBJ name, FIOBJ value);
  *
  * Returns -1 on error and 0 on success.
  */
-int http_set_header2(http_s *h, fio_str_info_s name, fio_str_info_s value);
+int http_set_header2(http_s *h, fio_string_info_s name, fio_string_info_s value);
 
 /**
  * Sets a response cookie.
@@ -460,7 +460,7 @@ struct http_settings_s *http_settings(http_s *h);
 /**
  * Returns the direct address of the connected peer (likely an intermediary).
  */
-fio_str_info_s http_peer_addr(http_s *h);
+fio_string_info_s http_peer_addr(http_s *h);
 
 /**
  * Hijacks the socket away from the HTTP protocol and away from facil.io.
@@ -481,7 +481,7 @@ fio_str_info_s http_peer_addr(http_s *h);
  * WARNING: this isn't a good way to handle HTTP connections, especially as
  * HTTP/2 enters the picture.
  */
-intptr_t http_hijack(http_s *h, fio_str_info_s *leftover);
+intptr_t http_hijack(http_s *h, fio_string_info_s *leftover);
 
 /* *****************************************************************************
 Websocket Upgrade (Server and Client connection establishment)
@@ -509,7 +509,7 @@ typedef struct {
    * overwritten once the function exits (it cannot be saved for later, but it
    * can be copied).
    */
-  void (*on_message)(ws_s *ws, fio_str_info_s msg, uint8_t is_text);
+  void (*on_message)(ws_s *ws, fio_string_info_s msg, uint8_t is_text);
   /**
    * The (optional) on_open callback will be called once the websocket
    * connection is established and before is is registered with `facil`, so no
@@ -669,10 +669,10 @@ void http_sse_set_timout(http_sse_s *sse, uint8_t timeout);
 
 struct http_sse_subscribe_args {
   /** The channel name used for the subscription. */
-  fio_str_info_s channel;
+  fio_string_info_s channel;
   /** The optional on message callback. If missing, Data is directly writen. */
-  void (*on_message)(http_sse_s *sse, fio_str_info_s channel,
-                     fio_str_info_s msg, void *udata);
+  void (*on_message)(http_sse_s *sse, fio_string_info_s channel,
+                     fio_string_info_s msg, void *udata);
   /** An optional callback for when a subscription is fully canceled. */
   void (*on_unsubscribe)(void *udata);
   /** Opaque user */
@@ -713,9 +713,9 @@ void http_sse_unsubscribe(http_sse_s *sse, uintptr_t subscription);
  * https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events
  */
 struct http_sse_write_args {
-  fio_str_info_s id;    /* (optional) sets the `id` event property. */
-  fio_str_info_s event; /* (optional) sets the `event` event property. */
-  fio_str_info_s data;  /* (optional) sets the `data` event property. */
+  fio_string_info_s id;    /* (optional) sets the `id` event property. */
+  fio_string_info_s event; /* (optional) sets the `event` event property. */
+  fio_string_info_s data;  /* (optional) sets the `data` event property. */
   intptr_t retry;       /* (optional) sets the `retry` event property. */
 };
 
@@ -743,7 +743,7 @@ int http_sse_close(http_sse_s *sse);
  *
  * Returns the same object (increases a reference count, no allocation is made).
  */
-http_sse_s *http_sse_dup(http_sse_s *sse);
+http_sse_s *http_sse_duplicate(http_sse_s *sse);
 
 /**
  * Frees an SSE handle by reference (decreases the reference count).
@@ -831,11 +831,11 @@ HTTP Status Strings and Mime-Type helpers
 ***************************************************************************** */
 
 /** Returns a human readable string related to the HTTP status number. */
-fio_str_info_s http_status2str(uintptr_t status);
+fio_string_info_s http_status2str(uintptr_t status);
 
 /** Registers a Mime-Type to be associated with the file extension. */
 void http_mimetype_register(char *file_ext, size_t file_ext_len,
-                            FIOBJ mime_type_str);
+                            FIOBJ mime_type_tring);
 
 /**
  * Finds the mime-type associated with the file extension, returning a String on
